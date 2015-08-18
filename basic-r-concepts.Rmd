@@ -1,5 +1,5 @@
 ---
-title: "Basic R Concepts - Oklahoma Earthquakes"
+title: "Part 2: Basic R Concepts"
 author: "Dan Nguyen"
 date: "August 17, 2015"
 output:

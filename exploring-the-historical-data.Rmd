@@ -1,0 +1,53 @@
+---
+title: "Part 3: Exploring the Historical Data"
+author: "Dan Nguyen"
+date: "August 17, 2015"
+output:
+  md_document:
+    variant: markdown_github
+---
+
+
+## Setup
+
+Load the libraries
+
+```{r, echo = FALSE}
+library(dplyr)
+library(lubridate)
+library(rgdal)
+library(ggplot2)
+```
+
+Load the maps data
+
+```{r, echo = FALSE}
+fn <- 'cb_2014_us_state_5m'
+zname <- paste(fn, '.zip', sep = '')
+url <- paste("http://www2.census.gov/geo/tiger/GENZ2014/shp", zname, sep = '/')
+if (!file.exists(zname)) download.file(url, zname)
+unzip(zname, exdir = "shp")
+us_map <- readOGR(paste('shp/', fn, '.shp', sep = ''), fn)
+```
+
+
+### Bulk loading the earthquakes data
+
+![image](http://blog.danwin.com/images/posts/ok-earthquakes/usgs-map-ok-tx.jpg)
+
+The form can be filled out like this:
+
+http://earthquake.usgs.gov/earthquakes/search/
+
+http://earthquake.usgs.gov/fdsnws/event/1/query.csv?
+
+
+#### (╯°□°）╯ ┻DATA┻
+
+Or if you don't want to go through the trouble of writing and running your own scraper, you can use the data that I've stored here:
+
+    https://github.com/dannguyen/ok-earthquakes-Rnotebook/TK/data/usgs-quakes-dump.csv.zip
+
+
+In the R script:
+
