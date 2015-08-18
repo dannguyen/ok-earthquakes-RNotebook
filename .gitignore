@@ -1,0 +1,12 @@
+_site
+.sass-cache
+_site
+.DS_Store
+_drafts
+s3_website.yml
+.pygments-cache
+.ruby-version
+.ruby-gemset
+feed.xml
+.RData
+.Rhistory
