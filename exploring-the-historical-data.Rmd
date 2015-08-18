@@ -1,5 +1,5 @@
 ---
-title: "Part 3: Exploring the Historical Data"
+title: "Chapter 3: Exploring the Historical Data"
 author: "Dan Nguyen"
 date: "August 17, 2015"
 output:
@@ -17,17 +17,56 @@ library(dplyr)
 library(lubridate)
 library(rgdal)
 library(ggplot2)
+library(grid)
+library(RCurl)
+setwd('/tmp')
 ```
 
-Load the maps data
+Load the maps data.
 
-```{r, echo = FALSE}
+```{r, message = FALSE}
 fn <- 'cb_2014_us_state_5m'
 zname <- paste(fn, '.zip', sep = '')
 url <- paste("http://www2.census.gov/geo/tiger/GENZ2014/shp", zname, sep = '/')
 if (!file.exists(zname)) download.file(url, zname)
 unzip(zname, exdir = "shp")
 us_map <- readOGR(paste('shp/', fn, '.shp', sep = ''), fn)
+```
+
+Remove all non-states including Washington D.C.:
+
+```{r, message = FALSE}
+non_states = c('DC', 'AS', 'GU', 'MP', 'PR', 'VI')
+us_map <- subset(us_map, !(us_map$STUSPS %in% non_states))
+```
+
+Set up my visual themes:
+
+```{r, message = FALSE}
+map_theme <-  theme_minimal() + theme(
+  axis.ticks = element_blank(),
+  axis.text = element_blank(),
+  axis.title = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  panel.background = element_blank(),
+  panel.margin = unit(0, "cm"),
+  plot.margin = unit(c(0, 0, 0, 0), "cm"),
+  legend.position = "right",
+  legend.key.width = unit(0.1, 'cm'),
+  legend.title = element_blank(),
+  strip.text.x = element_text(size = rel(3.0))
+)
+
+bar_theme <-  theme_gray() + theme(
+  axis.ticks = element_blank(),
+  axis.title = element_blank(),
+  axis.text = element_text(color = 'black'),
+  axis.text.x = element_blank(),
+  panel.background = element_rect(fill = "#EEEEEE"),
+  panel.grid.major = element_line(size = 0.2, colour = "white", linetype = "solid"),
+  plot.margin = unit(c(0, 0, 0, 0), "cm")
+)
 ```
 
 
@@ -44,10 +83,78 @@ http://earthquake.usgs.gov/fdsnws/event/1/query.csv?
 
 #### (╯°□°）╯ ┻DATA┻
 
-Or if you don't want to go through the trouble of writing and running your own scraper, you can use the data that I've stored here:
+Or if you don't want to go through the trouble of writing and running your own scraper, you can use the data that I've stored [at this URL](https://github.com/dannguyen/ok-earthquakes-RNotebook/raw/master/data/usgs-quakes-dump.csv.zip):
 
-    https://github.com/dannguyen/ok-earthquakes-Rnotebook/TK/data/usgs-quakes-dump.csv.zip
+    https://github.com/dannguyen/ok-earthquakes-RNotebook/raw/master/data/usgs-quakes-dump.csv.zip
 
 
 In the R script:
+
+```{r}
+fn <- 'usgs-quakes-dump.csv'
+zname <- paste(fn, 'zip', sep = '.')
+url <- paste("https://github.com/dannguyen/ok-earthquakes-RNotebook",
+    "raw/master/data", zname, sep = '/')
+if (!file.exists(zname)) download.file(url, zname, method = "libcurl")
+unzip(zname, exdir="data")
+usgs_data <- read.csv(paste('data', fn, sep = '/'), stringsAsFactors=FALSE)
+```
+
+Filter the data for just `earthquake`-type events with a magnitude of at least 2.0, then add a column for the `year` of the earthquake:
+
+```{r}
+quakes <- filter(usgs_data, type == 'earthquake', mag > 2.0) %>%
+  mutate(year = year(time))
+```
+
+Count the number of quakes this data contains:
+
+```{r}
+nrow(quakes)
+```
+
+Visualize the count of earthquakes by year:
+
+```{r}
+ggplot(quakes, aes(x = as.character(year))) + 
+  geom_histogram(binwidth = 1)  +
+  geom_histogram(data=filter(quakes, year == 2014), binwidth = 1, fill="#990000") + 
+  geom_histogram(data=filter(quakes, year == 2015), binwidth = 1, fill="gray") + 
+  stat_bin( binwidth = 1, geom = "text",  aes(label = as.character(year), ymax = 1.05 * max(..count..)), vjust=-0.5, size = 3.5) + bar_theme 
+```
+
+
+
+Create a SpatialPointsDataFrame from quakes, then join it with `us_map` to add the `STUSGS` column:
+
+```{r}
+sp_quakes <- SpatialPointsDataFrame(data = quakes,
+                                        coords = quakes[,c("longitude", "latitude")])
+proj4string(sp_quakes) <- proj4string(us_map)
+# create a temp variable
+xdf <- over(sp_quakes, us_map[, 'STUSPS'])
+sp_quakes$STUSPS <- xdf$STUSPS
+# remove all rows from sp_quakes in which STUSPS is NA:
+sp_quakes <- subset(sp_quakes, !is.na(sp_quakes$STUSPS))
+us_quakes <- as.data.frame(sp_quakes)
+```
+
+How many quakes do we have left?
+
+```{r}
+nrow(us_quakes)
+```
+
+For U.S. quakes, what does the histogram look like?
+
+```{r}
+ggplot(us_quakes, aes(x = as.character(year))) + 
+  geom_histogram(binwidth = 1)  +
+  geom_histogram(data=filter(us_quakes, year == 2014), binwidth = 1, fill="#990000") + 
+  geom_histogram(data=filter(us_quakes, year == 2015), binwidth = 1, fill="gray") + 
+  stat_bin( binwidth = 1, geom = "text",  aes(label = as.character(year), ymax = 1.05 * max(..count..)), vjust=-0.5, size = 3.5) + bar_theme 
+```
+
+
+
 

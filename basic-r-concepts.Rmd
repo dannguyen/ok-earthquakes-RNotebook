@@ -15,6 +15,7 @@ library(dplyr)
 library(lubridate)
 library(rgdal)
 library(ggplot2)
+library(grid)
 ```
 
 ```{r}
@@ -307,3 +308,191 @@ ggplot() +
               color = "red", alpha = 0.6, shape = 21) +
   coord_map("albers", lat0 = 39, latl = -42)
 ```
+
+
+### Filtering
+
+The process of subsetting the map, and then subsetting the quake points with the map subset, is a little cumbersome. It'd be nice if there was a column in the `quakes` dataframe that has the U.S. state that the earthquake occurred. That way, to select just earthquakes in California, we could do:
+
+
+```{r, eval = FALSE}
+ca_quakes <- filter(quakes, state == 'CA') 
+# alternatively:
+# ca_quakes <- ca_quakes[ca_quakes$state == 'CA]
+```
+
+We can accomplish adding this useful column to the `quakes` data by joining `quakes`, as a _spatial_ data frame against `us`. Let's start from the near-beginning with the variables `quakes` and `us`, which should each hold the data that was originally loaded from files.
+
+At this point, `quakes` is a regular data frame. We create a SpatialPointsDataFrame from it, then we set that SpatialPointsDataFrame's projection system equal to that of `us`'s projection system:
+
+```{r}
+sp_quakes <- SpatialPointsDataFrame(data = quakes,
+                                  coords = quakes[,c("longitude", "latitude")])
+proj4string(sp_quakes) <- proj4string(us)
+```
+
+Then we use the __sp__ package's __over__ function to return a dataframe consisting of rownumbersin `sp_quakes` and corresponding values from `us$STUSPS`:
+
+```{r}
+xdf <- over(sp_quakes, uss[, 'STUSPS'])
+```
+
+
+This is what the first few rows of `xdf` look like:
+
+```
+  STUSPS
+1     WA
+2     NV
+3   <NA>
+4   <NA>
+5   <NA>
+6     NV
+```
+
+The rows with `<NA>` for the `STUSPS` columns are rows in which the latitude/longitude coordinates did _not_ fall within one of `us`'s polygons.
+
+So the next step is to add this `xdf` data frame -- more specifically, just its `STUSPS` column, with `sp_quakes`:
+
+
+```{r}
+sp_quakes$STUSPS <- xdf$STUSPS
+```
+
+And finally, we want to remove all columns in `sp_quakes` in which the `STUSPS` column is `<NA>`, i.e. all non-U.S. earthquakes. I'm storing the result of this (and also converting it back to a regular data frame) into the variable `us_quakes` for the remainder of this exercise:
+
+```{r}
+us_quakes <- as.data.frame(subset(sp_quakes, !is.na(sp_quakes$STUSPS)))
+```
+
+And let's confirm that the `us_quakes` dataframe consists of fewer records than the `quakes` dataframe:
+
+```{r}
+nrow(quakes)
+```
+
+```{r}
+nrow(us_quakes)
+```
+
+
+Let's try mapping Oklahoma now using the `STUSPS` column in `us_quakes`:
+
+```{r, message = FALSE}
+ggplot() +
+  geom_polygon(data = us[us$STUSPS == 'OK',], 
+               aes(x = long, y = lat, group = group)) +
+  geom_point(data = filter(us_quakes, STUSPS == 'OK'), 
+              aes(x = longitude, y = latitude),
+              color = "red", alpha = 0.6, shape = 21) +
+  coord_map("albers", lat0 = 39, latl = -42)
+```
+
+it won't feel dramatically more elegant than how we previously filtered for California earthquakes, but it'll allow us to do aggregations-by-state. Early in this example, we did an group-by-count on `type` of the earthquake; Now we can do it with `STUSPS` to get the top 5 states by number of earthquakes this past month:
+
+
+```{r}
+group_by(us_quakes, STUSPS) %>% 
+      summarise(count = n()) %>%
+      arrange(desc(count)) %>%
+      head(5)
+```
+
+And here it is in barchart form:
+
+```{r, message = FALSE}
+ggplot(us_quakes, aes(x = STUSPS)) + geom_histogram(binwidth = 1)
+```
+
+
+
+Looks like Oklahoma is in the lead this month, beating California by 20. But is that abnormal for Oklahoma? We'll find out in the next chapter when we look at 20 years worth of USGS earthquake data.
+
+
+## Polishing our visuals
+
+Before moving on, I'm going to show the code that I'll use to tidy up and style the charts, or rather, remove as much clutter as possible. The complexities and many possibilities of styling with __ggplot2__ are far out of the scope of this guide. But I'm showing the code so that you're used to it when we're doing the visualizations in the next chapter.
+
+ZevRoss has a great chapter: http://zevross.com/blog/2014/08/04/beautiful-plotting-in-r-a-ggplot2-cheatsheet-3/
+
+http://docs.ggplot2.org/current/theme.html
+
+### Nicer histograms
+
+The default styles for bar charts is actually pretty good, as we saw in the previous histogram. One thing I want to fix is to remove the space between the
+
+
+For our purposes, I'm going to remove the gray background and add dark axis lines. I start off with using the `theme_minimal()` template and add attributes via the `theme()` function:
+
+```{r}
+bar_theme <-  theme_gray() + theme(
+  axis.ticks = element_blank(),
+  axis.title = element_blank(),
+  axis.text = element_text(color = 'black'),
+  axis.text.x = element_blank(),
+  panel.background = element_rect(fill = "#EEEEEE"),
+  panel.grid.major = element_line(size = 0.2, colour = "white", linetype = "solid"),
+  plot.margin = unit(c(0, 0, 0, 0), "cm")
+)
+
+ggplot(us_quakes, aes(x = STUSPS, label = STUSPS)) + geom_histogram(binwidth = 1)  +
+  stat_bin(binwidth = 1, geom = "text", aes(ymax = 1.05 * max(..count..)), vjust=-0.5)  + 
+  bar_theme
+```
+
+
+### Nicer maps
+
+
+```{r, message = FALSE}
+midw_map = us[us$STUSPS %in% c('IA','MO','IL','MN', 'NE', 'ND', 'SD', 'KS', 'WI'),]
+g <- ggplot(data = midw_map, aes(x = long, y = lat, group = group))
+```
+
+
+```{r, message = FALSE}
+map_theme <-  theme_minimal() + theme(
+  axis.ticks = element_blank(),
+  axis.text = element_blank(),
+  axis.title = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  panel.background = element_blank(),
+  panel.margin = unit(0, "cm"),
+  plot.margin = unit(c(0, 0, 0, 0), "cm"),
+  legend.position = "right",
+  legend.key.width = unit(0.1, 'cm'),
+  legend.title = element_blank(),
+  strip.text.x = element_text(size = rel(3.0))
+)
+
+```
+
+
+
+The styling of the polygons:
+
+```{r}
+g + geom_polygon(fill = "#D5D8C6", color = "#FFFFFF", size = 0.2) +
+    map_theme + coord_map("albers", lat0 = 39, latl = -42)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
