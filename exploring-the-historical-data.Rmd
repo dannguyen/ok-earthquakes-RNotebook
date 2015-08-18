@@ -153,10 +153,101 @@ ggplot(us_quakes, aes(x = as.character(year))) +
   geom_histogram(data=filter(us_quakes, year == 2014), binwidth = 1, fill="#990000") + 
   geom_histogram(data=filter(us_quakes, year == 2015), binwidth = 1, fill="gray") + 
   stat_bin(
-    data = filter(us_quakes, year %% 3 == 0 | year >= 2014),
+    data = filter(us_quakes, year %% 5 == 0 | year >= 2014),
     binwidth = 1, geom = "text",  aes(label = as.character(year), ymax = 1.05 * max(..count..)), vjust=-0.5, size = 3.5) + bar_theme 
 ```
 
 
 
+For Oklahoma?
+
+```{r}
+ok_quakes <- filter(us_quakes, STUSPS == 'OK')
+ggplot(ok_quakes, aes(x = as.character(year))) + 
+  geom_histogram(binwidth = 1)  +
+  geom_histogram(data=filter(ok_quakes, year == 2014), binwidth = 1, fill="#990000") + 
+  geom_histogram(data=filter(ok_quakes, year == 2015), binwidth = 1, fill="gray") + 
+  stat_bin(
+    data = filter(ok_quakes, year %% 5 == 0 | year >= 2014),
+    binwidth = 1, geom = "text",  aes(label = as.character(year), ymax = 1.05 * max(..count..)), vjust=-0.5, size = 3.5) + bar_theme + 
+  ggtitle("Earthquakes by year in Oklahoma")
+```
+
+
+## Use small-multiples to do comparisons
+
+But what if more than a few states have a large uptick in detected earthquakes in recent years? It could be that the USGS's equipment had a revolutionary advance in sensor technology. Or something globally catastrophic like Pacific Rim.
+
+So we want to compare _histograms across different states_. Of course, we could just repeat the above steps for each state as we did for Oklahoma. But ggplot has the `facet_wrap()` function that can do this repetitive charting and assemble the resulting charts into a nice grid.
+
+It's as easy as taking the exact same charting code and then adding a `facet_wrap()` call:
+
+```{r}
+top_states = group_by(us_quakes, STUSPS) %>% 
+      summarise(count = n()) %>%
+      arrange(desc(count)) %>%
+      head(9)
+top_states_quakes <- filter(us_quakes, STUSPS %in% top_states$STUSPS )
+g <- ggplot(top_states_quakes, aes(x = as.character(year))) + 
+  geom_histogram(binwidth = 1, fill = "#999999")  +
+  geom_histogram(data=filter(top_states_quakes, year >= 2012), binwidth = 1, fill="#990000") + 
+  geom_histogram(data=filter(top_states_quakes, year == 2015), binwidth = 1, fill="#BB9999")
+
+g + facet_wrap(~ STUSPS, ncol = 3)  + bar_theme 
+```
+
+
+It's not even close.
+
+
+```{r}
+g + scale_y_log10() + facet_wrap(~ STUSPS, ncol = 3)  + bar_theme 
+```
+
+
+
+
+```{r}
+ok_quakes <- filter(us_quakes, STUSPS == 'OK')
+ggplot(ok_quakes, aes(x = as.character(year), 
+                      fill = factor(ifelse(year >= 2012, 'A', 
+                                            ifelse(year >= 2005, 'B', 'C')
+                                           )
+                                  )
+                      )) +                                                   
+  geom_histogram(binwidth = 1)  
+```
+
+
+Pie:
+
+```{r}
+ok_quakes <- filter(us_quakes, STUSPS == 'OK')
+ggplot(ok_quakes, aes(x = factor(1), 
+                      fill = factor(ifelse(year >= 2012, 'A', 
+                                            ifelse(year >= 2005, 'B', 'C')
+                                           )
+                                  )
+                      )) +
+  geom_bar(width = 1) + 
+  geom_histogram(binwidth = 1)  + coord_polar(theta = "y") + map_theme 
+```
+
+
+Multipie:
+
+```{r}
+
+ggplot(top_states_quakes, aes(
+                      x = factor(1), 
+                      fill = factor(ifelse(year >= 2012, 'A', 
+                                            ifelse(year >= 2005, 'B', 'C')
+                                           )
+                                  )
+                      )) +
+  geom_bar(width = 1) + 
+  geom_histogram(binwidth = 1, aes(y = ..density..))  + coord_polar(theta = "y") + 
+
+  facet_wrap(~ STUSPS, ncol = 3)  + map_theme
+```
 
