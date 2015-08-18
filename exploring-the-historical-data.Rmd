@@ -152,7 +152,9 @@ ggplot(us_quakes, aes(x = as.character(year))) +
   geom_histogram(binwidth = 1)  +
   geom_histogram(data=filter(us_quakes, year == 2014), binwidth = 1, fill="#990000") + 
   geom_histogram(data=filter(us_quakes, year == 2015), binwidth = 1, fill="gray") + 
-  stat_bin( binwidth = 1, geom = "text",  aes(label = as.character(year), ymax = 1.05 * max(..count..)), vjust=-0.5, size = 3.5) + bar_theme 
+  stat_bin(
+    data = filter(us_quakes, year %% 3 == 0 | year >= 2014),
+    binwidth = 1, geom = "text",  aes(label = as.character(year), ymax = 1.05 * max(..count..)), vjust=-0.5, size = 3.5) + bar_theme 
 ```
 
 
