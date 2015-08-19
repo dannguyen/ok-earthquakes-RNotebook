@@ -19,6 +19,7 @@ library(rgdal)
 library(ggplot2)
 library(grid)
 library(RCurl)
+library(mapproj)
 setwd('/tmp')
 ```
 
@@ -117,10 +118,13 @@ Visualize the count of earthquakes by year:
 
 ```{r}
 ggplot(quakes, aes(x = as.character(year))) + 
-  geom_histogram(binwidth = 1)  +
+  geom_histogram(binwidth = 1, fill = "#888888")  +
   geom_histogram(data=filter(quakes, year == 2014), binwidth = 1, fill="#990000") + 
-  geom_histogram(data=filter(quakes, year == 2015), binwidth = 1, fill="gray") + 
-  stat_bin( binwidth = 1, geom = "text",  aes(label = as.character(year), ymax = 1.05 * max(..count..)), vjust=-0.5, size = 3.5) + bar_theme 
+  geom_histogram(data=filter(quakes, year == 2015), binwidth = 1, fill="#BB6666") + 
+  stat_bin( binwidth = 1, geom = "text",  
+            aes(label = as.character(year), ymax = 1.05 * max(..count..)), 
+            vjust=-0.5, size = 3.5) + 
+  bar_theme 
 ```
 
 
@@ -149,13 +153,110 @@ For U.S. quakes, what does the histogram look like?
 
 ```{r}
 ggplot(us_quakes, aes(x = as.character(year))) + 
-  geom_histogram(binwidth = 1)  +
+  geom_histogram(binwidth = 1, fill = "#888888")  +
   geom_histogram(data=filter(us_quakes, year == 2014), binwidth = 1, fill="#990000") + 
-  geom_histogram(data=filter(us_quakes, year == 2015), binwidth = 1, fill="gray") + 
+  geom_histogram(data=filter(us_quakes, year == 2015), binwidth = 1, fill="#BB6666") + 
   stat_bin(
     data = filter(us_quakes, year %% 5 == 0 | year >= 2014),
     binwidth = 1, geom = "text",  aes(label = as.character(year), ymax = 1.05 * max(..count..)), vjust=-0.5, size = 3.5) + bar_theme 
 ```
+
+
+
+```{r}
+ggplot(us_quakes, aes(x = format(ymd_hms(time), '%Y'))) + 
+  stat_bin( binwidth = 1) + geom_bar(position="stack")
+```
+
+
+Trying for a line graph
+
+```{r}
+xd <- us_quakes %>%
+  mutate(yearmonth = strftime(ymd_hms(time), '%Y-%m')) %>% 
+  group_by(yearmonth) %>% summarise(counts = n())
+```
+
+
+```{r}
+ggplot(xd, aes(x = yearmonth, y = counts, group = factor(1))) + geom_line()
+```
+
+Count the top months
+
+```{r}
+arrange(xd, desc(counts)) %>% head(10)
+```
+
+
+
+
+
+## Compare anomalies
+
+What's going on with that gigantic month?
+
+```{r}
+novd <- us_quakes %>%
+  filter(time >= "2002-11" & time <= "2002-12") %>%  
+  mutate(day = day(time)) 
+
+ggplot(novd, aes(x = day)) + geom_histogram(binwidth = 1)
+```
+
+```{r}
+group_by(novd, place) %>% summarise(c = n()) %>% arrange(desc(c)) %>% head(10)
+```
+
+
+TK: Compare the distribution of earthquakes in November 2012 versus Nov 2014
+
+```{r}
+novd <- us_quakes %>%
+  filter(time >= "2014-11" & time <= "2014-12") %>%  
+  mutate(day = day(time)) 
+
+ggplot(novd, aes(x = day)) + geom_histogram(binwidth = 1)
+```
+
+
+
+-------------
+
+United states Mapping
+
+Let's make continental sets. Territories are already filtered out, now we remove Alaska and Hawaii.
+
+```{r}
+cus_map <- subset(us_map, !(us_map$STUSPS %in% c('AK', 'HI')))
+cus_quakes <- subset(us_quakes, !(us_quakes$STUSPS %in% c('AK', 'HI')))
+```
+
+
+
+```{r}
+ggplot() + geom_polygon(data = cus_map, aes(x = long, y = lat, group = group)) + geom_point(data = cus_quakes, aes(x = longitude, y = latitude),
+          color = "red", alpha = 0.1, shape = 21) +
+          coord_map("albers", lat0 = 39, latl = -42)
+```
+
+
+
+
+
+
+
+
+
+----------------
+
+
+
+
+
+
+
+
 
 
 
@@ -164,9 +265,9 @@ For Oklahoma?
 ```{r}
 ok_quakes <- filter(us_quakes, STUSPS == 'OK')
 ggplot(ok_quakes, aes(x = as.character(year))) + 
-  geom_histogram(binwidth = 1)  +
+  geom_histogram(binwidth = 1, fill = "#888888")  +
   geom_histogram(data=filter(ok_quakes, year == 2014), binwidth = 1, fill="#990000") + 
-  geom_histogram(data=filter(ok_quakes, year == 2015), binwidth = 1, fill="gray") + 
+  geom_histogram(data=filter(ok_quakes, year == 2015), binwidth = 1, fill="#BB6666") + 
   stat_bin(
     data = filter(ok_quakes, year %% 5 == 0 | year >= 2014),
     binwidth = 1, geom = "text",  aes(label = as.character(year), ymax = 1.05 * max(..count..)), vjust=-0.5, size = 3.5) + bar_theme + 
@@ -321,10 +422,7 @@ How to show this proprtional to years though?
 
 ```{r}
 ggplot(top_states_quakes, 
-       aes(x = STUSPS, fill = factor(year), order = desc(year) 
-           
-        
-           )) + scale_fill_brewer() + 
-      
-  geom_histogram(binwidth = 1, color = 'black', ))
+       aes(x = STUSPS, fill = factor(year), order = desc(year))) + 
+       scale_fill_brewer() + 
+       geom_histogram(binwidth = 1, color = 'black' )
 ```
