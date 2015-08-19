@@ -234,7 +234,26 @@ ggplot(ok_quakes, aes(x = factor(1),
 ```
 
 
-Multipie:
+
+
+Line:
+
+
+
+```{r}
+ok_quakes <- filter(us_quakes, STUSPS == 'OK')
+ggplot(ok_quakes, aes(x = factor(1), 
+                      fill = factor(ifelse(year >= 2012, 'A', 
+                                            ifelse(year >= 2005, 'B', 'C')
+                                           )
+                                  )
+                      )) +
+  geom_bar(width = 1) + 
+  geom_histogram(binwidth = 1)  + coord_polar(theta = "y") + map_theme 
+```
+
+
+Multipie: (DOESNTWORK)
 
 ```{r}
 
@@ -251,3 +270,61 @@ ggplot(top_states_quakes, aes(
   facet_wrap(~ STUSPS, ncol = 3)  + map_theme
 ```
 
+
+
+Grouped bar chart
+
+```{r}
+ggplot(top_states_quakes, 
+       aes(x = year, fill = STUSPS)) +  
+  geom_histogram(binwidth = 1)
+```
+
+
+Proportional stacked bar graph
+
+
+```{r}
+zztop <- mutate(top_states_quakes, era = cut(year, 5, labels = cut(year, 5, include.lowest = T)))
+gzztop <- group_by(zztop, era, STUSPS) %>% summarise(counts = length(STUSPS)) %>%
+  group_by(STUSPS) %>% mutate(pct = counts * 100/ sum(counts))
+
+ggplot(gzztop, aes(x = STUSPS,  fill = era, y = pct)) + geom_bar(stat = "identity")
+```
+
+
+NOW let's do pie charts
+
+
+```{r}
+
+ggplot(gzztop, aes(x = factor(1), y = pct, fill = era)) +
+  scale_fill_manual(values = c("gray", "gray", "gray", "gray", "red")) + 
+  geom_bar(width = 1, stat = "identity", size = 0.2 , aes(order = desc(era))) + 
+  coord_polar(theta = "y") +
+  facet_wrap(~ STUSPS, ncol = 3)  + map_theme
+```
+
+
+A better grouped chart
+
+```{r}
+ggplot(top_states_quakes, 
+       aes(x = STUSPS, 
+       order = desc(ifelse(year < 2012,  '1995 - 2011', '2012 - 2015')),      
+       fill = ifelse(year < 2012,  '1995 - 2011', '2012 - 2015'))) +  
+  geom_histogram(binwidth = 1)
+```
+
+How to show this proprtional to years though?
+
+
+```{r}
+ggplot(top_states_quakes, 
+       aes(x = STUSPS, fill = factor(year), order = desc(year) 
+           
+        
+           )) + scale_fill_brewer() + 
+      
+  geom_histogram(binwidth = 1, color = 'black', ))
+```
