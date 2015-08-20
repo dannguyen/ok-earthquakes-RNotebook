@@ -39,11 +39,9 @@ And not far from Oklahoma, the Dallas-Fort Worth area has seen a jump in quake a
 > According to the U.S. Geological Survey, the Dallas area has suffered almost 40 small earthquakes (magnitude 2.0 or higher) since the beginning of this year, the latest a magnitude-2.7 quake near Farmers Branch on Saturday. Many of the epicenters were recorded in Farmers Branch and Irving, with a couple to the south in Venus.
 
 
-
-
-
-
 ## Links
+
+Hadley Wickham's [ggplot2 book is the best book you can read on both working with ggplot2 and understanding the grammar of graphics](https://github.com/hadley/ggplot2-book).
 
 [Mapping in R using the ggplot2 package (zevross.com)](http://zevross.com/blog/2014/07/16/mapping-in-r-using-the-ggplot2-package/) 
 
@@ -52,3 +50,4 @@ And not far from Oklahoma, the Dallas-Fort Worth area has seen a jump in quake a
 [r - How to filter a dataframe of geocoordinates using a KML polygon? - Stack Overflow (stackoverflow.com)](http://stackoverflow.com/questions/32041311/how-to-filter-a-dataframe-of-geocoordinates-using-a-kml-polygon) 
 
 [R maps - Filter coordinates out when plotting points in map - Stack Overflow (stackoverflow.com)](http://stackoverflow.com/questions/28672984/r-maps-filter-coordinates-out-when-plotting-points-in-map) 
+
