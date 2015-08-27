@@ -10,3 +10,5 @@ s3_website.yml
 feed.xml
 .RData
 .Rhistory
+*.html
+builds/

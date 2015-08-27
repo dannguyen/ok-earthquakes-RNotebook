@@ -5,6 +5,12 @@ date: "August 17, 2015"
 output:
   md_document:
     variant: markdown_github
+    preserve_yaml: true
+  html_document:
+    self_contained: false
+    toc: true
+  output_dir: builds
+
 ---
 
 ## Loading the libraries
@@ -53,10 +59,16 @@ dir.create('./data')
 
 ### Download earthquake data into a data frame
 
+Because the data files can get big, I've included an `if` statement so that if a file exists at `./data/all_month.csv`, the `download` command won't attempt to re-download the file.
+
+
 ```{r, message = FALSE}
 url <- "http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.csv"
 fname <- "./data/all_month.csv"
-if (!file.exists(fname)) download.file(url, fname)
+if (!file.exists(fname)){
+  print(paste("Downloading: ", url))
+  download.file(url, fname)
+}
 ```
 
 The standard __read.csv()__ function can be used to convert the CSV file into a data frame, which I store into a variable named `usgs_data`:
@@ -72,15 +84,162 @@ usgs_data <- read.csv(fname, stringsAsFactors = FALSE)
 ```{r, message = FALSE}
 url <- "http://www2.census.gov/geo/tiger/GENZ2014/shp/cb_2014_us_state_5m.zip"
 fname <- "./data/cb_2014_us_state_5m.zip"
-if (!file.exists(fname)) download.file(url, fname)
+if (!file.exists(fname)){
+  print(paste("Downloading: ", url))
+  download.file(url, fname)
+}
 unzip(fname, exdir = "./data/shp")
 ```
 
-Inside the `data/` directory should be a subdirectory named `shp/` with a variety of data files. Using the __rgdal__ library, this is how we read in the boundary data and assign it to the variable `us_map`:
+Inside the `data/` directory should be a subdirectory named `shp/` with a variety of data files. Using the __rgdal__ library, we use the `readOGR()` command to read the shape file, convert it to a __SpatialPolygonsDataFrame__-type object, and assign it to the variable `us_map`:
 
 ```{r, message = FALSE}
 us_map <- readOGR("./data/shp/cb_2014_us_state_5m.shp", "cb_2014_us_state_5m")
 ```
+
+
+
+
+Going forward, we can work knowing that `usgs_data` and `us_map` contain data frames for the earthquakes and the U.S. state boundaries, respectively.
+
+
+## Organizing the earthquake data
+
+Let's count how many earthquake records there are in a month's worth of USGS earthquake data:
+
+```{r}
+nrow(usgs_data)
+```
+
+The USGS data feed contains more than just earthquakes, though. So we use dplyr's  __group_by()__ function on the `type` column and then __summarise()__ the record counts:
+
+```{r}
+usgs_data %>% group_by(type) %>% summarise(count = n())
+```
+
+For this particular journalstic endeavour, we don't care about explosions and quarry blasts. We also only care about events of a reasonable magnitude &ndash; [remember that magnitudes under 3.0 are often not even noticed by the average person](http://earthquake.usgs.gov/learn/topics/mag_vs_int.php). Let's use `group_by()` and `summarise()` again, but faceted around the `mag` column (rounded to the nearest integer), to see the distribution:
+
+```{r}
+usgs_data %>% group_by(round(mag)) %>% summarise(count = n())
+```
+
+And to get warmed up for visualization with __ggplot2__, let's view the distribution with a histogram; note that the use of __geom_histogram()__ obiviates the need to do a summarization:
+
+```{r}
+ggplot(usgs_data, aes(x = round(mag))) +
+  geom_histogram(binwidth = 1) +
+  scale_x_discrete()
+```
+
+The [July 28, 2015 Reuters report](https://news.yahoo.com/more-bigger-drilling-linked-earthquakes-rattle-oklahoma-073805543.html) focused on Oklahoma earthquakes of 3.0 magnitude or above, so let's filter `usgs_data` appropriately and store it in a variable named `quakes`:
+
+```{r}
+quakes <- usgs_data %>% filter(mag >= 3.0, type == 'earthquake')
+```
+
+The `quakes` dataframe is now about a tenth the size of the data we original downloaded, which will work just fine for our purposes:
+
+```{r}
+nrow(quakes)
+```
+
+
+### Plotting the earthquake data without a map
+
+It's worth remembering that a geographical map can be thought of a [plain ol' scatter plot](http://docs.ggplot2.org/0.9.3/geom_point.html). In this case, each dot is plotted using the __longitude__ and __latitude__ values, which serve as the __x__ and __y__ coordinates, respectively:
+
+```{r, message = F}
+ggplot(quakes, aes(x = longitude, y = latitude)) + geom_point()
+```
+
+Even without the world map boundaries, we can see in the locations of the earthquakes a rough outline of the world's fault lines:
+
+![Digital Tectonic Activity Map of the Earth, via NASA](./images/Plate_tectonics_map.gif)
+
+With ~1,000 points &ndash; and, in the next chapter, __100,000+__ points, we run into a problem of [__overplotting__](http://www.cookbook-r.com/Graphs/Scatterplots_(ggplot2)/#handling-overplotting), in which multiple earthquake events in close proximity to each other all overlap and appear to be a single point.
+
+There are several ways of dealing with this, including:
+
+- Increasing the _size_ of each point.
+- Increasing the _translucency_, i.e. the __alpha__ of each point.
+- Changing the [_shape_ of each point](http://www.cookbook-r.com/Graphs/Shapes_and_line_types/) to something such as a hollow circle.
+
+And just to add some variety, I'll change the [color](http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf) of the points from black to `firebrick`:
+
+We can apply these styles in the `geom_point()` call:
+
+```{r, message = F}
+ggplot(quakes, aes(x = longitude, y = latitude)) +
+  geom_point(size = 3,
+             alpha = 0.2,
+             shape = 1,
+             color = 'firebrick')
+```
+
+#### Varying the size by magnitude
+
+Obviously, some earthquakes are more momentous than others. An easy way to show this would be to vary the _size_ of the point by `mag`:
+
+
+```{r, message = F}
+ggplot(quakes, aes(x = longitude, y = latitude)) +
+  geom_point(aes(size = mag),
+             alpha = 0.2,
+             shape = 1,
+             color = 'firebrick')
+```
+
+However, this understates the difference between earthquakes; remember that moving up [_one_ step means an increase in energy release by a __factor of 32__; __two__ steps is a factor of __1000__](https://en.wikipedia.org/wiki/Richter_magnitude_scale). Scaling the circles accurately will be...a little awkward. And I also don't know enough about ggplot to map the legend's labels to the proper non-transformed values. In any case, for the purposes of this investigation, we mostly care about the _frequency_ of earthquakes, rather than their actual magnitudes, so I'll leave out the size aesthetic in the examples.
+
+
+
+Let's move on to plotting the boundaries of the United States.
+
+
+## Plotting the map boundaries
+
+The data contained in the `us_map` variable is actually a _kind_ of data frame, a __SpatialPolygonsDataFrame__, which is provided to us as part of the [__sp__ package](https://cran.r-project.org/web/packages/sp/sp.pdf), which was included via the [rgdal](https://cran.r-project.org/web/packages/rgdal/index.html) package.
+
+Since `us_map` is a data frame, it's pretty easy to plop it right into ggplot():
+
+```{r, message = FALSE}
+ggplot() +
+  geom_polygon(data = us_map, aes(x = long, y = lat, group = group))
+```
+
+By default, things look a little squished because the longitude and latitude values are treated as values on a flat, 2-dimensional plane. As we've learned, the world is _not_ flat. So to have the geographical points -- in this case, the polygons that make up state boundaries -- look more like we're accustomed to on a globe, we have to _project_ the coordinates.
+
+This is a cartographic concept that is beyond my ability to concisely and intelligibly explain, so I direct you to Michael Corey, of the Center for Investigative Reporting, and his explainer, ["Choosing the Right Map Projection"](https://source.opennews.org/en-US/learning/choosing-right-map-projection/). And Mike Bostock has a series of [excellent interactive examples showing some of the complexities of map projection](http://bost.ocks.org/mike/example/#1); I embed one of his D3 examples below:
+
+
+<iframe src="http://bl.ocks.org/dannguyen/raw/36e0f357433dda000dc0/918717fa8db0d0f8d8460026b4a41815b82362de/" width="700" height="400" marginwidth="0" marginheight="0" scrolling="no"></iframe>
+
+
+Once you understand map projections, or at least are aware of their existence, applying them to ggplot() is straightforward. In the snippet below, I apply the [__Albers__ projection](https://en.wikipedia.org/wiki/Albers_projection), which is the standard projection for the U.S. Census (and Geological Survey) using the __coord_map()__ function. Projecting in Albers requires a couple of parameters that [I'm just going to copy and modify from this r-bloggers example](https://rud.is/b/2015/03/15/simple-lower-us-48-albers-maps-local-no-api-citystate-geocoding-in-r/), though I assume it has something to do with specifying the parallels needed for accurate proportions:
+
+```{r, message = FALSE}
+ggplot() +
+  geom_polygon(data = us_map, aes(x = long, y = lat, group = group)) + 
+  coord_map("albers", lat0 = 38, latl = 43)
+```
+
+
+
+
+
+
+<!--
+To render this file:
+
+library(rmarkdown)
+render('basic-r-concepts.Rmd', output_dir = './builds',
+  html_document(toc = TRUE, self_contained = TRUE))
+render('basic-r-concepts.Rmd', output_dir = './builds',
+  md_document(variant = "markdown_github",
+              preserve_yaml = TRUE))
+
+
+-->
 
 
 
