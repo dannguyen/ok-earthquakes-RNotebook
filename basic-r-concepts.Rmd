@@ -7,492 +7,80 @@ output:
     variant: markdown_github
 ---
 
-
-## Necessary libraries
+## Loading the libraries
 
 ```{r, message = FALSE}
 library(dplyr)
 library(lubridate)
 library(rgdal)
 library(ggplot2)
-library(grid)
+require(grid)
 ```
+
+- [ggplot2](http://ggplot2.org/) is _the_ visualization framework. Made by Hadley Wickham.
+- [dplyr](https://cran.rstudio.com/web/packages/dplyr/vignettes/introduction.html), also made by Hadley Wickham, is a library for manipulating dataframes and includes transformations such as `mutate()` and `filter()` as well as aggregation functions. It also has [nice piping](http://seananderson.ca/2014/09/13/dplyr-intro.html), which warms the Unix programmer inside me.
+- [lubridate](https://github.com/hadley/lubridate) - I include Wickham's time-handling library only for its convenience functions, such as [year()](https://cran.r-project.org/web/packages/lubridate/vignettes/lubridate.html), which seems like overkill if you've never dealt with trying to parse time values as a programmer. Think of it as [moment.js for R](http://momentjs.com/).
+- [grid](https://stat.ethz.ch/R-manual/R-devel/library/grid/html/grid-package.html) - contains some functionality that ggplot2 uses for chart styling, particularly the [unit()](https://stat.ethz.ch/R-manual/R-devel/library/grid/html/unit.html) function.
+- [rgdal](https://cran.r-project.org/web/packages/rgdal/index.html) - bindings for geospatial operations, including map projection and the reading of map shapefiles. Can be a bear to install due to a variety of dependencies. If you're on OS X, I recommend [installing Homebrew](http://brew.sh/) and running `brew install gdal` before installing the rgdal package via R.
+
+
+## Downloading the data
+
+There are two data files we need:
+
+- __[A feed of earthquake reports in CSV format from the U.S. Geological Survey](http://earthquake.usgs.gov/earthquakes/feed/v1.0/csv.php).__ For this section, we'll start by using the ["Past 30 Days - All Earthquakes"](http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.csv) feed, which can be downloaded at this URL:
+
+    http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.csv
+
+- __[Cartographic boundary shapefiles for U.S. state boundaries, via the U.S. Census](https://www.census.gov/geo/maps-data/data/tiger-cart-boundary.html)__. The listing of state boundaries can be [found here](https://www.census.gov/geo/maps-data/data/cbf/cbf_state.html). There are several levels of detail; the resolution of `1:5,000,000` is good enough for our purposes:
+
+    http://www2.census.gov/geo/tiger/GENZ2014/shp/cb_2014_us_state_5m.zip
+
+
+If you're following along many years from now and the above links no longer work, the [Github repo for this walkthrough](https://github.com/dannguyen/ok-earthquakes-RNotebook) contains copies of the raw files for you to practice on. You can either just clone this repo to get the files. Or download them here (these URLs are subject to the whims of Github's framework and may change down the road):
+
+- [https://raw.githubusercontent.com/dannguyen/ok-earthquakes-RNotebook/master/data/all_month.csv](https://raw.githubusercontent.com/dannguyen/ok-earthquakes-RNotebook/master/data/all_month.csv)
+- [https://raw.githubusercontent.com/dannguyen/ok-earthquakes-RNotebook/master/data/cb_2014_us_state_5m.zip](https://raw.githubusercontent.com/dannguyen/ok-earthquakes-RNotebook/master/data/cb_2014_us_state_5m.zip)
+
+
+
+First we create a data directory to store our files:
 
 ```{r}
-setwd('/tmp')
+dir.create('./data')
 ```
 
 
-Load the earthquakes
+### Download earthquake data into a data frame
 
 ```{r, message = FALSE}
 url <- "http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.csv"
-fname <- "all_month.csv"
+fname <- "./data/all_month.csv"
 if (!file.exists(fname)) download.file(url, fname)
-usgs_data <- read.csv(fname, stringsAsFactors=FALSE)
 ```
 
-### Filter data for earthquake events
-
-Not all the data involves earthquakes:
+The standard __read.csv()__ function can be used to convert the CSV file into a data frame, which I store into a variable named `usgs_data`:
 
 ```{r}
-group_by(usgs_data, type) %>% summarise(count = n())
-```
-
-Filter for just earthquakes at least magnitude 2.0:
-
-```{r}
-quakes <- filter(usgs_data, type == 'earthquake', mag > 2.0)
-```
-
-## Date functions, adding columns
-
-```{r}
-quakes  <- mutate(quakes, day = day(time))
-```
-
-```{r, message = FALSE}
-ggplot(quakes, aes(day)) + geom_histogram(binwidth = 1)
+usgs_data <- read.csv(fname, stringsAsFactors = FALSE)
 ```
 
 
-# Geographically filtering the data
 
-## Download the map data
+### Download and read the map data
 
 ```{r, message = FALSE}
 url <- "http://www2.census.gov/geo/tiger/GENZ2014/shp/cb_2014_us_state_5m.zip"
-fname <- "cb_2014_us_state_5m.zip"
+fname <- "./data/cb_2014_us_state_5m.zip"
 if (!file.exists(fname)) download.file(url, fname)
-unzip(fname, exdir = "shp")
-us <- readOGR("shp/cb_2014_us_state_5m.shp", "cb_2014_us_state_5m")
+unzip(fname, exdir = "./data/shp")
 ```
 
-### Displaying the map and points
-
-The map:
-
+Inside the `data/` directory should be a subdirectory named `shp/` with a variety of data files. Using the __rgdal__ library, this is how we read in the boundary data and assign it to the variable `us_map`:
 
 ```{r, message = FALSE}
-ggplot() + geom_polygon(data = us, aes(x = long, y = lat, group = group))
+us_map <- readOGR("./data/shp/cb_2014_us_state_5m.shp", "cb_2014_us_state_5m")
 ```
-
-
-The points:
-
-
-```{r, message = FALSE}
-ggplot() + geom_point(data = quakes, aes(x = longitude, y = latitude), color = "red")
-```
-
-All together:
-
-```{r, message = FALSE}
-ggplot() +
-  geom_polygon(data = us, aes(x = long, y = lat, group = group)) +
-  geom_point(data = quakes, aes(x = longitude, y = latitude), color = "red")
-```
-
-A little better:
-
-```{r, message = FALSE}
-ggplot() +
-  geom_polygon(data = us, aes(x = long, y = lat, group = group)) +
-  geom_point(data = quakes, aes(x = longitude, y = latitude, size = mag),
-              color = "red", alpha = 0.2, shape = 21)
-```
-
-From here on out, I won't be using `size = mag` because it doesn't add much. Plus it's inaccurate. Each step up in magnitude is an increase in force TK of 10, meaning the circle for magnitude 6 should 1000 times larger than for 3.
-
-For this analysis, we care less about size of earthquakes and more about their frequency of occurrence.
-
-
-
-
-
-
-## Adding a projection
-
-The previous example is a little distorted, as the units for `lat` and `long` are not equal.
-
-Using `coord_equal()` helps mitigate that, resulting in a wider graphic:
-
-
-```{r, message = FALSE}
-ggplot() +
-  geom_polygon(data = us, aes(x = long, y = lat, group = group)) +
-  geom_point(data = quakes, aes(x = longitude, y = latitude),
-              color = "red", alpha = 0.2, shape = 21) +
-  coord_equal()
-```
-
-
-But that doesn't quite work. TKTK
-
-Working with projections should be one of the last steps in the process. But applying a more attractive projection to our map is a nice [segue to the batshit-hell-of-a-rabbit-hole that is cartography](https://source.opennews.org/en-US/learning/choosing-right-map-projection/).
-
-
-As you know, our data displays are typically *flat* but the Earth is *spherical*, leading to a distorted . One way to mitigate this is to project, or translate, the coordinates onto a
-
-
-```{r}
-ggplot() +
-  geom_polygon(data = us, aes(x = long, y = lat, group = group)) +
-  geom_point(data = quakes, aes(x = longitude, y = latitude),
-              color = "red", alpha = 0.2, shape = 21) +
-  coord_map("ortho")
-```
-
-Let's make the map focused on America:
-
-```{r}
-ggplot() +
-  geom_polygon(data = us, aes(x = long, y = lat, group = group)) +
-  geom_point(data = quakes, aes(x = longitude, y = latitude),
-              color = "red", alpha = 0.2, shape = 21) +
-  coord_map("ortho",orientation=c(39, -98, 0))
-```
-
-The spherical display is neat but we're going to be focused on the U.S. and individual states, so we don't need as much spherical-simulation. So we'll use Albers:
-
-https://rud.is/b/2015/03/15/simple-lower-us-48-albers-maps-local-no-api-citystate-geocoding-in-r/
-
-```{r}
-ggplot() +
-  geom_polygon(data = us, aes(x = long, y = lat, group = group)) +
-  geom_point(data = quakes, aes(x = longitude, y = latitude),
-              color = "red", alpha = 0.2, shape = 21) +
-  coord_map("albers", lat0 = 39, latl = -42)
-```
-
-
-
-## Filter the quakes data by geogrpahy
-
-Going forward, we want to focus only on earthquakes in the United States, and ultimately, Oklahoma. Unfortunately, there's no column in the USGS earthquakes data that describes countries and states/provinces. The closest thing is the `place` column:
-
-```{r}
-head(quakes$place)
-```
-
-Theoretically, we could get most of the U.S. states by doing a complex query where we filter for rows in which `place` contains the name of one of the 50 United States. But that's cumbersome, and there are probably edge cases (such as `"Georgia"`) that we'd have to write even more cumbersome code for.
-
-Instead, we can use our downloaded map data to essentially tell R: "filter for the earthquake points that fall within the boundaries of the polyons defined in `us`.". This is possible via the [__sp__ package](https://cran.r-project.org/web/packages/sp/sp.pdf), which is included as a dependency to [rgdal](https://cran.r-project.org/web/packages/rgdal/index.html).
-
-The first step is to convert the `quakes` dataframe into a `SpatialPointsDataFrame`.
-
-```{r}
-sp_quakes <- SpatialPointsDataFrame(data = quakes,
-                                         coords = quakes[,c("longitude", "latitude")])
-```
-
-Now that the earthquake data is "spatial data", it needs to concern itself with projection, too. We need to give it the same __projection__ as the `us` data.
-
-```{r}
-proj4string(sp_quakes) <- proj4string(us)
-```
-
-Because we haven't actually changed the projection of `uss` from when we first loaded the original map data (and the `coord_map()` call in the plotting process doesn't alter the underlying data), this doesn't actually change any of the coordinates in `sp_quakes`. But it's a neccesary step for this next step, which creates a subset of points from `sp_quakes` -- i.e. the points that fall within the polygons contained in `uss`, and assigns it to the variable `sp_us_quakes`:
-
-
-```{r}
-sp_us_quakes <- sp_quakes[us,]
-```
-
-How big of difference did that make? Let's count the rows:
-
-In the full list of quakes:
-
-```{r}
-nrow(sp_quakes)
-```
-
-In the `uss`-filtered quakes:
-
-```{r}
-nrow(sp_us_quakes)
-```
-
-We can confirm this by plotting the map polygons and earthquake points. We'll use the same plotting code as before, but change the variable names of the `data` argument in `geom_point()`. Before I call `ggplot()`, I create a new variable, `us_quakes`, which is just `sp_us_quakes` converted from a SpatialPointsDataFrame to a plain data frame, because `geom_point()` doesn't know how to handle SpatialPointsDataFrames:
-
-```{r}
-us_quakes <- as.data.frame(sp_us_quakes)
-```
-
-
-
-```{r, message = FALSE}
-ggplot() +
-  geom_polygon(data = us, aes(x = long, y = lat, group = group)) +
-  geom_point(data = us_quakes, aes(x = longitude, y = latitude),
-              color = "red", alpha = 0.2, shape = 21) +
-  coord_map("albers", lat0 = 39, latl = -42)
-```
-
-So the visualization now only shows earthquakes within the United States. However, the actual chart shows a large amount of empty space. That's because the furthest tip of Alaska is [both the most western *and* eastern point of the United States](https://en.wikipedia.org/wiki/Extreme_points_of_the_United_States), such that it wraps around to the other side (longitude of 179+).
-
-We'll include Alaska when doing state-by-state earthquake counts. But for mapping beauty, let's remove it from our current plots.
-
-### Adding state names to the quakes data
-
-To remove Alaska, we need to remove both its geodata from `us` *and* its earthquakes from the `us_quakes` data. Let's start with using `subset()` to filter `us`.
-
-The `us@data` object contains metadata about the geocordinates, including the "names" of the polygons, and additional attributes such as postal code:
-
-```{r}
-colnames(us@data)
-```
-
-The columns we care about are `GEOID`, `NAME`, and `STUSPS`:
-
-```{r}
-head(select(us@data, NAME, GEOID, STUSPS))
-```
-
-Using `subset()` to filter and assign the result to `uss`:
-
-```{r}
-uss <- subset(us, us$STUSPS != 'AK')
-```
-
-Now use `uss` to filter the earthquakes data:
-
-
-```{r}
-sp_us_quakes <- sp_quakes[uss,]
-us_quakes = as.data.frame(sp_us_quakes)
-```
-
-And let's re-visualize:
-
-```{r, message = FALSE}
-ggplot() +
-  geom_polygon(data = uss, aes(x = long, y = lat, group = group)) +
-  geom_point(data = us_quakes, aes(x = longitude, y = latitude),
-              color = "red", alpha = 0.2, shape = 21) +
-  coord_map("albers", lat0 = 39, latl = -42)
-```
-
-Let's remove Alaska, Hawaii, and all the territories:
-
-```{r}
-uss <- subset(us, !(us$STUSPS %in% c('AK', 'HI', 'AS', 'GU', 'MP', 'PR', 'VI')))
-us_quakes = as.data.frame(sp_quakes[uss,])
-```
-
-And the map of only the continental United States:
-
-```{r, message = FALSE}
-ggplot() +
-  geom_polygon(data = uss, aes(x = long, y = lat, group = group)) +
-  geom_point(data = us_quakes, aes(x = longitude, y = latitude),
-              color = "red", alpha = 0.2, shape = 21) +
-  coord_map("albers", lat0 = 39, latl = -42)
-```
-
-
-Much nicer. Let's try creating a subset of data for one state, such as California. We just have to change the condition passed into `subset()`:
-
-```{r}
-ca <- subset(us, us$STUSPS == 'CA')
-ca_quakes = as.data.frame(sp_quakes[ca,])
-```
-
-And the map of just California and its quakes:
-
-```{r, message = FALSE}
-ggplot() +
-  geom_polygon(data = ca, aes(x = long, y = lat, group = group)) +
-  geom_point(data = ca_quakes, aes(x = longitude, y = latitude),
-              color = "red", alpha = 0.6, shape = 21) +
-  coord_map("albers", lat0 = 39, latl = -42)
-```
-
-
-### Filtering
-
-The process of subsetting the map, and then subsetting the quake points with the map subset, is a little cumbersome. It'd be nice if there was a column in the `quakes` dataframe that has the U.S. state that the earthquake occurred. That way, to select just earthquakes in California, we could do:
-
-
-```{r, eval = FALSE}
-ca_quakes <- filter(quakes, state == 'CA') 
-# alternatively:
-# ca_quakes <- ca_quakes[ca_quakes$state == 'CA]
-```
-
-We can accomplish adding this useful column to the `quakes` data by joining `quakes`, as a _spatial_ data frame against `us`. Let's start from the near-beginning with the variables `quakes` and `us`, which should each hold the data that was originally loaded from files.
-
-At this point, `quakes` is a regular data frame. We create a SpatialPointsDataFrame from it, then we set that SpatialPointsDataFrame's projection system equal to that of `us`'s projection system:
-
-```{r}
-sp_quakes <- SpatialPointsDataFrame(data = quakes,
-                                  coords = quakes[,c("longitude", "latitude")])
-proj4string(sp_quakes) <- proj4string(us)
-```
-
-Then we use the __sp__ package's __over__ function to return a dataframe consisting of rownumbersin `sp_quakes` and corresponding values from `us$STUSPS`:
-
-```{r}
-xdf <- over(sp_quakes, uss[, 'STUSPS'])
-```
-
-
-This is what the first few rows of `xdf` look like:
-
-```
-  STUSPS
-1     WA
-2     NV
-3   <NA>
-4   <NA>
-5   <NA>
-6     NV
-```
-
-The rows with `<NA>` for the `STUSPS` columns are rows in which the latitude/longitude coordinates did _not_ fall within one of `us`'s polygons.
-
-So the next step is to add this `xdf` data frame -- more specifically, just its `STUSPS` column, with `sp_quakes`:
-
-
-```{r}
-sp_quakes$STUSPS <- xdf$STUSPS
-```
-
-And finally, we want to remove all columns in `sp_quakes` in which the `STUSPS` column is `<NA>`, i.e. all non-U.S. earthquakes. I'm storing the result of this (and also converting it back to a regular data frame) into the variable `us_quakes` for the remainder of this exercise:
-
-```{r}
-us_quakes <- as.data.frame(subset(sp_quakes, !is.na(sp_quakes$STUSPS)))
-```
-
-And let's confirm that the `us_quakes` dataframe consists of fewer records than the `quakes` dataframe:
-
-```{r}
-nrow(quakes)
-```
-
-```{r}
-nrow(us_quakes)
-```
-
-
-Let's try mapping Oklahoma now using the `STUSPS` column in `us_quakes`:
-
-```{r, message = FALSE}
-ggplot() +
-  geom_polygon(data = us[us$STUSPS == 'OK',], 
-               aes(x = long, y = lat, group = group)) +
-  geom_point(data = filter(us_quakes, STUSPS == 'OK'), 
-              aes(x = longitude, y = latitude),
-              color = "red", alpha = 0.6, shape = 21) +
-  coord_map("albers", lat0 = 39, latl = -42)
-```
-
-it won't feel dramatically more elegant than how we previously filtered for California earthquakes, but it'll allow us to do aggregations-by-state. Early in this example, we did an group-by-count on `type` of the earthquake; Now we can do it with `STUSPS` to get the top 5 states by number of earthquakes this past month:
-
-
-```{r}
-group_by(us_quakes, STUSPS) %>% 
-      summarise(count = n()) %>%
-      arrange(desc(count)) %>%
-      head(5)
-```
-
-And here it is in barchart form:
-
-```{r, message = FALSE}
-ggplot(us_quakes, aes(x = STUSPS)) + geom_histogram(binwidth = 1)
-```
-
-
-
-Looks like Oklahoma is in the lead this month, beating California by 20. But is that abnormal for Oklahoma? We'll find out in the next chapter when we look at 20 years worth of USGS earthquake data.
-
-
-## Polishing our visuals
-
-Before moving on, I'm going to show the code that I'll use to tidy up and style the charts, or rather, remove as much clutter as possible. The complexities and many possibilities of styling with __ggplot2__ are far out of the scope of this guide. But I'm showing the code so that you're used to it when we're doing the visualizations in the next chapter.
-
-ZevRoss has a great chapter: http://zevross.com/blog/2014/08/04/beautiful-plotting-in-r-a-ggplot2-cheatsheet-3/
-
-http://docs.ggplot2.org/current/theme.html
-
-### Nicer histograms
-
-The default styles for bar charts is actually pretty good, as we saw in the previous histogram. One thing I want to fix is to remove the space between the
-
-
-For our purposes, I'm going to remove the gray background and add dark axis lines. I start off with using the `theme_minimal()` template and add attributes via the `theme()` function:
-
-```{r}
-bar_theme <-  theme_gray() + theme(
-  axis.ticks = element_blank(),
-  axis.title = element_blank(),
-  axis.text = element_text(color = 'black'),
-  axis.text.x = element_blank(),
-  panel.background = element_rect(fill = "#EEEEEE"),
-  panel.grid.major = element_line(size = 0.2, colour = "white", linetype = "solid"),
-  plot.margin = unit(c(0, 0, 0, 0), "cm")
-)
-
-ggplot(us_quakes, aes(x = STUSPS, label = STUSPS)) + geom_histogram(binwidth = 1)  +
-  stat_bin(binwidth = 1, geom = "text", aes(ymax = 1.05 * max(..count..)), vjust=-0.5)  + 
-  bar_theme
-```
-
-
-### Nicer maps
-
-
-```{r, message = FALSE}
-midw_map = us[us$STUSPS %in% c('IA','MO','IL','MN', 'NE', 'ND', 'SD', 'KS', 'WI'),]
-g <- ggplot(data = midw_map, aes(x = long, y = lat, group = group))
-```
-
-
-```{r, message = FALSE}
-map_theme <-  theme_minimal() + theme(
-  axis.ticks = element_blank(),
-  axis.text = element_blank(),
-  axis.title = element_blank(),
-  panel.grid.major = element_blank(),
-  panel.grid.minor = element_blank(),
-  panel.background = element_blank(),
-  panel.margin = unit(0, "cm"),
-  plot.margin = unit(c(0, 0, 0, 0), "cm"),
-  legend.position = "right",
-  legend.key.width = unit(0.1, 'cm'),
-  legend.title = element_blank(),
-  strip.text.x = element_text(size = rel(3.0))
-)
-
-```
-
-
-
-The styling of the polygons:
-
-```{r}
-g + geom_polygon(fill = "#D5D8C6", color = "#FFFFFF", size = 0.2) +
-    map_theme + coord_map("albers", lat0 = 39, latl = -42)
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
