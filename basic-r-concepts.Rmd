@@ -16,11 +16,12 @@ output:
 ## Loading the libraries
 
 ```{r, message = FALSE}
+library(ggplot2)
+require(grid)
 library(dplyr)
 library(lubridate)
 library(rgdal)
-library(ggplot2)
-require(grid)
+library(maptools)
 ```
 
 - [ggplot2](http://ggplot2.org/) is _the_ visualization framework. Made by Hadley Wickham.
@@ -28,6 +29,7 @@ require(grid)
 - [lubridate](https://github.com/hadley/lubridate) - I include Wickham's time-handling library only for its convenience functions, such as [year()](https://cran.r-project.org/web/packages/lubridate/vignettes/lubridate.html), which seems like overkill if you've never dealt with trying to parse time values as a programmer. Think of it as [moment.js for R](http://momentjs.com/).
 - [grid](https://stat.ethz.ch/R-manual/R-devel/library/grid/html/grid-package.html) - contains some functionality that ggplot2 uses for chart styling, particularly the [unit()](https://stat.ethz.ch/R-manual/R-devel/library/grid/html/unit.html) function.
 - [rgdal](https://cran.r-project.org/web/packages/rgdal/index.html) - bindings for geospatial operations, including map projection and the reading of map shapefiles. Can be a bear to install due to a variety of dependencies. If you're on OS X, I recommend [installing Homebrew](http://brew.sh/) and running `brew install gdal` before installing the rgdal package via R.
+- [maptools](https://cran.r-project.org/package=maptools) - I include this for its [elide() function](https://rud.is/b/2014/11/16/moving-the-earth-well-alaska-hawaii-with-r/), which allows us to inset Alaska and Hawaii on the U.S. map.
 
 
 ## Downloading the data
@@ -215,14 +217,14 @@ This is a cartographic concept that is beyond my ability to concisely and intell
 <iframe src="http://bl.ocks.org/dannguyen/raw/36e0f357433dda000dc0/918717fa8db0d0f8d8460026b4a41815b82362de/" width="700" height="400" marginwidth="0" marginheight="0" scrolling="no"></iframe>
 
 
-Once you understand map projections, or at least are aware of their existence, applying them to ggplot() is straightforward. In the snippet below, I apply the [__Albers__ projection](https://en.wikipedia.org/wiki/Albers_projection), which is the standard projection for the U.S. Census (and Geological Survey) using the __coord_map()__ function. Projecting in Albers requires a couple of parameters that [I'm just going to copy and modify from this r-bloggers example](https://rud.is/b/2015/03/15/simple-lower-us-48-albers-maps-local-no-api-citystate-geocoding-in-r/), though I assume it has something to do with specifying the parallels needed for accurate proportions:
+Once you understand map projections, or at least are aware of their existence, applying them to ggplot() is straightforward. In the snippet below, I apply the [__Albers__ projection](https://en.wikipedia.org/wiki/Albers_projection), which is the standard projection for the U.S. Census (and Geological Survey) using the __coord_map()__ function. Projecting in Albers requires a couple of parameters that [I'm just going to copy and modify from this r-bloggers example](https://rud.is/b/2015/03/15/simple-lower-us-48-albers-maps-local-no-api-citystate-geocoding-in-r/), though I assume it has something to do with [specifying the parallels needed for accurate proportions](https://cran.r-project.org/web/packages/mapproj/mapproj.pdf):
 
 
 
 ```{r, message = FALSE}
 ggplot() +
   geom_polygon(data = us_map, aes(x = long, y = lat, group = group)) +
-  coord_map("albers", lat0 = 38, latl = 42)
+  coord_map("albersusa", lat0 = 38, latl = 42)
 ```
 
 
@@ -230,7 +232,7 @@ ggplot() +
 
 The U.S. Census boundaries only contains data for the United States. So why does our map span the entire globe? Because Alaska has the annoying property of being [both the most western *and* eastern point of the United States](https://en.wikipedia.org/wiki/Extreme_points_of_the_United_States), such that it wraps around to the other side of our coordinate system, i.e. from longitude -179 to 179.
 
-There's obviously a more graceful, mathematically-proper way of translating the coordinates so that everything fits nicely on our chart. But let's just remove Alaska -- and Hawaii, and all the non-states -- as that gives us an opportunity to practice filtering SpatialPolygonsDataFrames.
+There's obviously [a more graceful, mathematically-proper way of translating the coordinates](https://rud.is/b/2014/11/16/moving-the-earth-well-alaska-hawaii-with-r/) so that everything fits nicely on our chart. But for now, to keep things simple, let's just remove Alaska -- and Hawaii, and all the non-states -- as that gives us an opportunity to practice filtering SpatialPolygonsDataFrames.
 
 First, we inspect the column names of `us_map`'s _data_ to see which one corresponds to the _name_ of each polygon, e.g. `Iowa` or `CA`:
 
@@ -253,9 +255,13 @@ byebye_alaska <- us_map[us_map$STUSPS != 'AK',]
 To filter out Alaska, Hawaii, and the non-states, e.g. Guam and Washington D.C., and then assign the result to the variable `usc_map`:
 
 ```{r}
-x_states <- c('AK', 'HI', 'AS', 'GU', 'MP', 'PR', 'VI')
+x_states <- c('AK', 'HI', 'AS', 'DC', 'GU', 'MP', 'PR', 'VI')
 usc_map <- us_map[!(us_map$STUSPS %in% x_states), ]
+# alternatively, using subset():
+usc_map <- subset(us_map, !(us_map$STUSPS %in% x_states))
 ```
+
+
 
 Now let's map the _contiguous_ United States, and, while we're here, let's change the style of the map to be in dark outline with white fill:
 
@@ -342,7 +348,9 @@ To see the change that we want &ndash; just earthquakes in the contiguous United
 sp_usc_quakes <- sp_quakes[usc_map,]
 ```
 
-I actually don't know enough about basic R notation and __S4__ objects to know _why_ this works, but it does _just work_:
+
+
+I actually don't know enough about basic R notation and __S4__ objects to know or explain _why_ this works, but it does _just work_:
 
 ```{r}
 usc_quakes <- as.data.frame(sp_usc_quakes)
@@ -351,7 +359,7 @@ ggplot(usc_quakes, aes(x = longitude, y = latitude)) +
   geom_polygon(data = usc_map, aes(x = long, y = lat, group = group),
                    fill = "white", color = "#444444", size = 0.1) +
   geom_point(size = 3,
-               alpha = 0.2,
+               alpha = 0.5,
                shape = 1,
                color = 'firebrick')  +
   coord_map("albers", lat0 = 38, latl = 42)
@@ -359,11 +367,208 @@ ggplot(usc_quakes, aes(x = longitude, y = latitude)) +
 
 ### Subsetting points by state
 
-What if we want to just show earthquakes in California?
+What if we want to just show earthquakes in California? We first subset `usc_map`:
 
+```{r}
+ca_map <- us_map[us_map$STUSPS == 'CA',]
+```
+
+Then we use `ca_map` to filter `sp_quakes`:
+
+```{r}
+ca_quakes <- as.data.frame(sp_quakes[ca_map,])
+```
+
+Mapping California and its quakes:
+
+```{r}
+ggplot(ca_quakes, aes(x = longitude, y = latitude)) +
+  geom_polygon(data = ca_map, aes(x = long, y = lat, group = group),
+                   fill = "white", color = "#444444", size = 0.1) +
+  geom_point(size = 3,
+               alpha = 0.8,
+               shape = 1,
+               color = 'firebrick')  +
+  coord_map("albers", lat0 = 38, latl = 42)
+```
 
 
 ## Joining shape file attributes to a data frame
+
+The process of subsetting `usc_map` for each state, _then_ subsetting the `sp_quakes` data frame, is a little cumbersome. Another approach is to _add a new column_ to the earthquakes data frame that specifies which state the earthquake was in.
+
+As I mentioned previously, the USGS data has a `place` column, but it doesn't follow a structured taxonomy of geographical labels and serves primarily as a human-friendly label, e.g. `"South of the Fiji Islands"` and `"Northern Mid-Atlantic Ridge"`.
+
+So let's add the `STUSPS` column to `sp_quakes`. For this, we use the __sp__ package's __over()__ function, which will join the rows of `sp_quakes` to the `STUSPS` column of `usc_map`, for quakes in which the geospatial coordinates overlap with the polygons in `usc_map`:
+
+
+```{r}
+xdf <- over(sp_quakes, usc_map[, 'STUSPS'])
+```
+
+Most of the `STUSPS` values in `xdf` will be `<NA>` because, most of the earthquakes do not take place in the United States. Though we see of all the contiguous United States, Oklahoma (i.e. `OK`) has experienced the most earthquakes by far in this month-long dataset:
+
+```{r}
+xdf %>% group_by(STUSPS) %>%
+        summarize(count = n()) %>%
+        arrange(desc(count))
+```
+
+To get a data frame of contiguous U.S.-only quakes, we merge `xdf` with `sp_quakes`, then filter the result by removing all rows in which `STUSPS` is `<NA>`:
+
+```{r}
+ydf <- cbind(sp_quakes, xdf) %>% filter(!is.na(STUSPS))
+usc_quakes <- as.data.frame(ydf)
+```
+
+How is this different than before, when we derived `usc_quakes` like so:
+
+```{r}
+old_usc_quakes <- as.data.frame(sp_quakes[usc_map,])
+```
+
+Try it; the resulting number of rows will be the same. However, the difference in our latest approach is that `usc_quakes` has that additional `STUSPS` column:
+
+```{r}
+head(select(usc_quakes, place, STUSPS))
+```
+
+Which, among other things, makes it possibly to do aggregates of the earthquakes dataframe by `STUSPS`:
+
+```{r}
+ggplot(usc_quakes, aes(STUSPS)) + geom_histogram(binwidth = 1)
+```
+
+At this point, we've covered just about all the data-munging and visualization techniques we need to effectively analyze and visualize the historical earthquake data for the United States.
+
+
+## Bringing back Hawaii and Alaska
+
+I wasn't going to attempt this but while writing my latest draft of this section, I stumbled across this excellent walkthrough by Bob Rudis -- [Moving the Earth (well, Alaska & Hawaii) With R](https://rud.is/b/2014/11/16/moving-the-earth-well-alaska-hawaii-with-r/) -- that details how to inset Alaska and Hawaii on a projected map. In this section, I reapprorpiate his technique for our specific setup.
+
+Recall that `us_map` contains the original boundary data for every state and U.S. territory. Instead of filtering out all non-contiguous states and territories, we will now just filter out non-states, such as Guam and Washington D.C.
+
+```{r}
+non_states <- c('AS', 'DC', 'GU', 'MP', 'PR', 'VI')
+states_map <- us_map[!(us_map$STUSPS %in% non_states), ]
+```
+
+
+Instead of applying the Albers projection via `coord_map()` during the plotting action, we apply it beforehand to the `states_map` data frame:
+
+```{r}
+states_map <- spTransform(states_map, CRS("+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs"))
+```
+
+
+
+Then, we remove Hawaii and Alaska, so that we can perform a transformation on them separately before merging them back into the rest of the contiguous states:
+
+```{r}
+alaska <- states_map[states_map$STUSPS == 'AK', ]
+hawaii <- states_map[states_map$STUSPS == 'HI', ]
+
+alaska <- states_map[states_map$STUSPS=="AK",]
+alaska <- elide(alaska, rotate=-50)
+alaska <- elide(alaska, scale=max(apply(bbox(alaska), 1, diff)) / 2.3)
+alaska <- elide(alaska, shift=c(-2100000, -2500000))
+proj4string(alaska) <- proj4string(states_map)
+
+# extract, then rotate & shift hawaii
+hawaii <- states_map[states_map$STUSPS=="HI",]
+hawaii <- elide(hawaii, rotate=-35)
+hawaii <- elide(hawaii, shift=c(5400000, -1400000))
+proj4string(hawaii) <- proj4string(states_map)
+states_map <- states_map[!states_map$STUSPS %in% c('AK', 'HI'), ]
+states_map <- rbind(states_map, alaska, hawaii)
+ggplot() +
+  geom_polygon(data = states_map, aes(x = long, y = lat,
+                                      group = group),
+                 fill = "white", color = "#444444", size = 0.1)
+```
+
+
+
+
+
+
+
+
+
+
+
+TKTKTKTKT
+
+
+
+
+Now we use the __elide()__ function that comes with the __maptools__ package:
+
+```{r}
+alaska <- elide(alaska, rotate = -50)
+alaska <- elide(alaska, scale = max(apply(bbox(alaska), 1, diff)) / 2.3)
+alaska <- elide(alaska, shift = c(-40, -10))
+alaska@proj4string <- states_map@proj4string
+# remove the old alaska
+states_map <- states_map[!states_map$STUSPS %in% c('AK', 'HI'), ]
+states_map <- rbind(states_map, alaska)
+
+ggplot() +
+  geom_polygon(data = states_map, aes(x = long, y = lat,
+                                      group = group),
+                 fill = "white", color = "#444444", size = 0.1) +
+  coord_map("albers", lat0 = 38, latl = 42)
+
+```
+
+
+
+
+
+
+TKTK
+
+
+```{r}
+non_states <- c('AS', 'DC', 'GU', 'MP', 'PR', 'VI')
+states_map <- us_map[!(us_map$STUSPS %in% non_states), ]
+alaska <- states_map[states_map$STUSPS == 'AK', ]
+alaska <- elide(alaska, rotate = 0)
+alaska <- elide(alaska, scale = max(apply(bbox(alaska), 1, diff)) / 2.0)
+alaska <- elide(alaska, shift = c(-25, 15))
+alaska@proj4string <- states_map@proj4string
+# Now hawaii
+hawaii <- states_map[states_map$STUSPS == 'HI', ]
+hawaii <- elide(hawaii, rotate = 0)
+hawaii <- elide(hawaii, shift = c(20, 0))
+hawaii@proj4string <- states_map@proj4string
+
+# remove the old alaska
+states_map <- states_map[!states_map$STUSPS %in% c('AK', 'HI'), ]
+states_map <- rbind(states_map, alaska, hawaii)
+
+ggplot() +
+  geom_polygon(data = states_map, aes(x = long, y = lat,
+                                      group = group),
+                 fill = "white", color = "#444444", size = 0.1) +
+  coord_map("albers", lat0 = 38, latl = 42)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
