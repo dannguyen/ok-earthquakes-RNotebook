@@ -224,7 +224,7 @@ Once you understand map projections, or at least are aware of their existence, a
 ```{r, message = FALSE}
 ggplot() +
   geom_polygon(data = us_map, aes(x = long, y = lat, group = group)) +
-  coord_map("albersusa", lat0 = 38, latl = 42)
+  coord_map("albers", lat0 = 38, latl = 42)
 ```
 
 
@@ -457,105 +457,99 @@ states_map <- us_map[!(us_map$STUSPS %in% non_states), ]
 Instead of applying the Albers projection via `coord_map()` during the plotting action, we apply it beforehand to the `states_map` data frame:
 
 ```{r}
-states_map <- spTransform(states_map, CRS("+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs"))
+albers_map <- spTransform(states_map, CRS("+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs"))
 ```
 
 
 
-Then, we remove Hawaii and Alaska, so that we can perform a transformation on them separately before merging them back into the rest of the contiguous states:
+Then, we pluck out the data for Hawaii and Alaska, so that we can perform a transformation on them separately before merging them back into the rest of the contiguous states:
 
 ```{r}
-alaska <- states_map[states_map$STUSPS == 'AK', ]
-hawaii <- states_map[states_map$STUSPS == 'HI', ]
+alaska <- albers_map[albers_map$STUSPS == 'AK', ]
+hawaii <- albers_map[albers_map$STUSPS == 'HI', ]
+```
 
-alaska <- states_map[states_map$STUSPS=="AK",]
+
+We use the __elide()__ function that comes with the __maptools__ package to perform the transformations that move Alaska and Hawaii closer on the plot:
+
+```{r}
 alaska <- elide(alaska, rotate=-50)
 alaska <- elide(alaska, scale=max(apply(bbox(alaska), 1, diff)) / 2.3)
 alaska <- elide(alaska, shift=c(-2100000, -2500000))
-proj4string(alaska) <- proj4string(states_map)
+proj4string(alaska) <- proj4string(albers_map)
 
-# extract, then rotate & shift hawaii
-hawaii <- states_map[states_map$STUSPS=="HI",]
 hawaii <- elide(hawaii, rotate=-35)
 hawaii <- elide(hawaii, shift=c(5400000, -1400000))
-proj4string(hawaii) <- proj4string(states_map)
-states_map <- states_map[!states_map$STUSPS %in% c('AK', 'HI'), ]
-states_map <- rbind(states_map, alaska, hawaii)
+proj4string(hawaii) <- proj4string(albers_map)
+```
+
+Then we remove/replace Alaska and Hawaii in the `albers_map` data frame:
+
+```{r}
+final_map <- albers_map[!albers_map$STUSPS %in% c('AK', 'HI'), ]
+final_map <- rbind(final_map, alaska, hawaii)
+```
+
+
+```{r}
 ggplot() +
-  geom_polygon(data = states_map, aes(x = long, y = lat,
+  geom_polygon(data = final_map, aes(x = long, y = lat,
                                       group = group),
                  fill = "white", color = "#444444", size = 0.1)
 ```
 
 
+### Plotting Alaska and Hawaii earthquakes
 
 
-
-
-
-
-
-
-
-TKTKTKTKT
-
-
-
-
-Now we use the __elide()__ function that comes with the __maptools__ package:
-
-```{r}
-alaska <- elide(alaska, rotate = -50)
-alaska <- elide(alaska, scale = max(apply(bbox(alaska), 1, diff)) / 2.3)
-alaska <- elide(alaska, shift = c(-40, -10))
-alaska@proj4string <- states_map@proj4string
-# remove the old alaska
-states_map <- states_map[!states_map$STUSPS %in% c('AK', 'HI'), ]
-states_map <- rbind(states_map, alaska)
-
-ggplot() +
-  geom_polygon(data = states_map, aes(x = long, y = lat,
-                                      group = group),
-                 fill = "white", color = "#444444", size = 0.1) +
-  coord_map("albers", lat0 = 38, latl = 42)
-
-```
-
-
-
-
-
-
-TKTK
 
 
 ```{r}
-non_states <- c('AS', 'DC', 'GU', 'MP', 'PR', 'VI')
-states_map <- us_map[!(us_map$STUSPS %in% non_states), ]
-alaska <- states_map[states_map$STUSPS == 'AK', ]
-alaska <- elide(alaska, rotate = 0)
-alaska <- elide(alaska, scale = max(apply(bbox(alaska), 1, diff)) / 2.0)
-alaska <- elide(alaska, shift = c(-25, 15))
-alaska@proj4string <- states_map@proj4string
-# Now hawaii
-hawaii <- states_map[states_map$STUSPS == 'HI', ]
-hawaii <- elide(hawaii, rotate = 0)
-hawaii <- elide(hawaii, shift = c(20, 0))
-hawaii@proj4string <- states_map@proj4string
+# TK THIS IS WHERE transformation has to be done again
+# TK why longitude.1??
+sp_quakes <- SpatialPointsDataFrame(data = quakes,
+                          coords = quakes[,c("longitude", "latitude")])
+sp_quakes@proj4string <- states_map@proj4string
+albers_quakes <- spTransform(sp_quakes, CRS("+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs"))
 
-# remove the old alaska
-states_map <- states_map[!states_map$STUSPS %in% c('AK', 'HI'), ]
-states_map <- rbind(states_map, alaska, hawaii)
 
-ggplot() +
-  geom_polygon(data = states_map, aes(x = long, y = lat,
-                                      group = group),
-                 fill = "white", color = "#444444", size = 0.1) +
-  coord_map("albers", lat0 = 38, latl = 42)
+xdf <- over(albers_quakes, albers_map[, 'STUSPS'])
+albers_quakes$STUSPS <- xdf$STUSPS
+# filter out NA values for STUSPS
+albers_quakes <- albers_quakes[!is.na(albers_quakes$STUSPS), ]
 
+# Now transform hawaii and alaska quakes
+alaska_quakes <- albers_quakes[albers_quakes$STUSPS == 'AK', ]
+hawaii_quakes <- albers_quakes[albers_quakes$STUSPS == 'HI', ]
+
+
+alaska_quakes <- elide(alaska_quakes, rotate=-50)
+alaska_quakes <- elide(alaska_quakes, scale=max(apply(bbox(alaska), 1, diff)) / 2.3)
+alaska_quakes <- elide(alaska_quakes, shift=c(-2100000, -2500000))
+proj4string(alaska_quakes) <- proj4string(albers_quakes)
+
+hawaii_quakes <- elide(hawaii_quakes, rotate=-35)
+hawaii_quakes <- elide(hawaii_quakes, shift=c(5400000, -1400000))
+proj4string(hawaii_quakes) <- proj4string(albers_quakes)
+
+# Then we remove/replace Alaska and Hawaii in the `albers_map` data frame:
+
+final_quakes <- albers_quakes[!albers_quakes$STUSPS %in% c('AK', 'HI'), ]
+final_quakes <- rbind(final_quakes, alaska_quakes, hawaii_quakes)
 ```
 
 
+```{r}
+
+ggplot(as.data.frame(final_quakes), aes(x = longitude.1, y = latitude.1)) +
+  geom_polygon(data = final_map, aes(x = long, y = lat, group = group),
+                   fill = "white", color = "#444444", size = 0.1) +
+  geom_point(size = 3,
+               alpha = 0.5,
+               shape = 1,
+               color = 'firebrick')
+
+```
 
 
 
@@ -580,7 +574,7 @@ ggplot() +
 
 <!--
 To render this file:
-
+setwd("~/Dropbox/rprojs/ok-earthquakes-Rnotebook/")
 library(rmarkdown)
 render('basic-r-concepts.Rmd', output_dir = './builds',
   html_document(toc = TRUE, self_contained = TRUE))
