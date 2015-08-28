@@ -317,7 +317,7 @@ Now assign that value to `sp_quakes` (which, by default, has a `proj4string` att
 sp_quakes@proj4string <- us_map@proj4string
 ```
 
-Let's see what the map plot looks like. Note that in the snippet below, I don't use `sp_quakes` as the data set, but `as.data.frame(sp_quakes)`. This conversion is necessary as ggplot2 doesn't know how to deal with the SpatialPointsDataFrame (and yet it does fine with SpatialPolygonsDataFrames...):
+Let's see what the map plot looks like. Note that in the snippet below, I don't use `sp_quakes` as the data set, but `as.data.frame(sp_quakes)`. This conversion is necessary as ggplot2 doesn't know how to deal with the SpatialPointsDataFrame (and yet it does fine with SpatialPolygonsDataFrames...whatever...):
 
 
 ```{r}
@@ -331,17 +331,23 @@ ggplot(as.data.frame(sp_quakes), aes(x = longitude, y = latitude)) +
   coord_map("albers", lat0 = 38, latl = 42)
 ```
 
+No real change...we've only gone through the process of making a spatial points data frame. Creating that spatial data frame, then converting it back to a data frame to use in ggplot() has basically no effect -- though it _would_ if the geospatial data in `usc_map` had a projection that significantly transformed its lat/long coordinates.
 
+### How to subset a spatial points data frame
 
-
-
-TKTKTK:
-
+To see the change that we want &ndash; just earthquakes in the contiguous United States &ndash; we _subset_ the spatial points data frame, i.e. `sp_quakes`, using `usc_map`. This is actually quite easy, and uses similar notation as when subsetting a plain data frame:
 
 
 ```{r}
-quakedata <- as.data.frame(sp_quakes[usc_map,])
-ggplot(quakedata, aes(x = longitude, y = latitude)) +
+sp_usc_quakes <- sp_quakes[usc_map,]
+```
+
+I actually don't know enough about basic R notation and __S4__ objects to know _why_ this works, but it does _just work_:
+
+```{r}
+usc_quakes <- as.data.frame(sp_usc_quakes)
+
+ggplot(usc_quakes, aes(x = longitude, y = latitude)) +
   geom_polygon(data = usc_map, aes(x = long, y = lat, group = group),
                    fill = "white", color = "#444444", size = 0.1) +
   geom_point(size = 3,
@@ -350,6 +356,16 @@ ggplot(quakedata, aes(x = longitude, y = latitude)) +
                color = 'firebrick')  +
   coord_map("albers", lat0 = 38, latl = 42)
 ```
+
+### Subsetting points by state
+
+What if we want to just show earthquakes in California?
+
+
+
+## Joining shape file attributes to a data frame
+
+
 
 
 
