@@ -31,10 +31,11 @@ theme_dan_map <- function(){
 
 
 
-theme_dans_grid <- function(){
+theme_dan_grid <- function(){
     theme_dan() + theme(
       plot.margin = unit(c(0, 0, 0, 0), "cm"),
       panel.margin = unit(0, "cm"),
-      strip.text.x = element_text(size = rel(3.0))
+      strip.text.x = element_text(size = rel(3.0)),
+      axis.text.x = element_blank()
     )
 }

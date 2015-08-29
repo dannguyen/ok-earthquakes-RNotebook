@@ -81,10 +81,7 @@ quakes <- quakes %>% mutate(year = year(time)) %>%
       ifelse(year <= 2005, "2001-2005",
       ifelse(year <= 2010, "2006-2010", "2011-2015"))))
 
-
-
-
-# Create a spatial data frame
+# Create a spatial data frame----------------------------------
 sp_quakes <- SpatialPointsDataFrame(data = quakes,
                           coords = quakes[,c("longitude", "latitude")])
 sp_quakes@proj4string <- states_map@proj4string
@@ -94,27 +91,71 @@ xdf <- over(sp_quakes, states_map[, 'STUSPS'])
 states_quakes <- cbind(sp_quakes, xdf) %>% filter(!is.na(STUSPS))
 ```
 
-# TODO
-- add year column, and era column
+
+Plot a histogram of all of the earthquakes by state since 1995, and highlight Oklahoma in orange:
 
 ```{r, message = F}
-zquakes <- filter(states_quakes, year(time) > 2009)
-ggplot(zquakes, aes(STUSPS)) + geom_histogram(binwidth = 1)
+ggplot(states_quakes, aes(STUSPS)) + geom_histogram(binwidth = 1, width = 0.5) +
+  geom_histogram(data=filter(states_quakes, STUSPS == "OK"), binwidth = 1, fill="orange", width = 0.5) +
+   theme(axis.text.x = element_text(angle = 70)) + ggtitle("U.S. Earthquakes Since 1995")
+```
+
+Reduce the noise by filtering out states. Only a few states have a significant number of earthquakes.
+
+Order the x-axis by count: http://stackoverflow.com/questions/20041136/how-to-avoid-ggplot-sorting-the-x-axis-while-plotting-geom-bar
+
+
+
+```{r, message = F}
+qcounts <- states_quakes %>% group_by(STUSPS) %>% summarise(count = n()) %>%
+    arrange(desc(count))
+# create a vector
+qcounts$x1 <- factor(qcounts$STUSPS, levels = qcounts$STUSPS)
+ggplot(qcounts, aes(x1, count)) + 
+  geom_bar(width = 0.5, stat = "identity") +
+  geom_bar(data = filter(qcounts, STUSPS == "OK"),stat = "identity", fill = "orange", width = 0.5) +
+   theme(axis.text.x = element_text(angle = 70)) + ggtitle("U.S. Earthquakes Since 1995")
+```
+
+Pick top 12:
+
+```{r}
+top_states <- head(qcounts, 12)$STUSPS
+top_quakes <- filter(states_quakes, states_quakes$STUSPS %in% top_states)
 ```
 
 
+
+
+Plot a histogram of the earthquakes by state since 2010.
+
+
+```{r, message = F}
+top_quakes$x1 <- factor(top_quakes$STUSPS, levels = as.vector(top_states))
+top_quakes.ge2010 <- filter(top_quakes, year >= 2010) 
+ggplot(top_quakes.ge2010, aes(x1)) + 
+  geom_histogram(binwidth = 1) +
+  geom_histogram(data=filter(top_quakes.ge2010, STUSPS == "OK"), binwidth = 1, fill="orange") +
+  ggtitle("U.S. Earthquakes Since 2010")
+```
+
 ## Within comparisons: OK year over year
+
+ObvTK there's a lot of action since the 2010s. Let's get a closer look:
+
+```{r}
+ggplot(states_quakes
+```
+
+
+
 
 ## Full comparison: OK, number of earthquakes
 
 ## Full/width, OK vs States,
 
 
-```{r}
-top_states <- (group_by(states_quakes, STUSPS) %>%
-  summarise(count = n()) %>% arrange(desc(count)) %>%
-  head(8))$STUSPS
-```
+
 
 
 
@@ -124,12 +165,12 @@ top_states <- (group_by(states_quakes, STUSPS) %>%
 ```{r}
 
 top_states_quakes <- filter(states_quakes, STUSPS %in% top_states)
-g <- ggplot(top_states_quakes, aes(x = as.character(year))) + 
-  geom_histogram(binwidth = 1, fill = "#999999")  +
-  geom_histogram(data=filter(top_states_quakes, year >= 2012), binwidth = 1, fill="#990000") + 
-  geom_histogram(data=filter(top_states_quakes, year == 2015), binwidth = 1, fill="#BB9999")
+g <- ggplot(top_states_quakes, aes(x = as.character(year))) +
+  geom_histogram(binwidth = 1, fill = "#999999", width = 0.5)  +
+  geom_histogram(data=filter(top_states_quakes, year >= 2012), binwidth = 1, fill="#990000", width = 0.5) +
+  geom_histogram(data=filter(top_states_quakes, year == 2015), binwidth = 1, fill="#BB9999", width = 0.5)
 
-g + facet_wrap(~ STUSPS, ncol = 4)   
+g + facet_wrap(~ STUSPS, ncol = 4) + theme_dan_grid()
 ```
 
 
