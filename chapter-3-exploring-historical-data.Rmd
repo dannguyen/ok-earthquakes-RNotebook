@@ -146,11 +146,6 @@ ObvTK there's a lot of action since the 2010s. Let's focus our look at just Okla
 
 
 
-```{r, message = F}
-ggplot(states_quakes, aes(strftime(time, '%Y-%m'))) +
-  geom_histogram(binwidth = 1) +
-  scale_x_discrete(breaks = unique(strftime(states_quakes$time, '%Y-%m'))[seq(1,28,7)])
-```
 
 
 
@@ -233,16 +228,36 @@ For post-2005
 st_quakes_ge2005 <- filter(states_quakes, year >= 2005)
 mths_ge2005 <- months[months > "2005"]
 yrs_ge2005 <- years[years >= 2005]
-ggplot(st_quakes_ge2005, aes(factor(year_month))) +
+myplot <- ggplot(st_quakes_ge2005, aes(factor(year_month))) +
+  annotate("rect", xmin = "2010-01", xmax = Inf, ymin = 0, ymax = Inf,
+                   color = "red", fill = "#FFFAFC", linetype = "dashed")  
+myplot +
   geom_histogram(binwidth = 1, width = 1) +
   scale_x_discrete(breaks = mths_ge2005[seq(1, length(mths_ge2005), 12)], labels = yrs_ge2005)
 ```
 
-Stacked chart
+
+
+Without Oklahoma: TK MOVE UP TO GRID, side by side.
 
 ```{r, message = F}
 
-ggplot(st_quakes_ge2005, aes(factor(year_month))) +
+  myplot +
+  geom_histogram(data = filter(st_quakes_ge2005, STUSPS != 'OK'), binwidth = 1, width = 1.0) +
+  scale_x_discrete(breaks = mths_ge2005[seq(1, length(mths_ge2005), 12)], labels = yrs_ge2005) +
+
+  ggtitle("Earthquakes in the U.S., not including Oklahoma") 
+
+```
+
+
+### Stacked chart
+
+It's better to use a stacked chart to compare the makeup
+
+
+```{r, message = F}
+  myplot + 
   geom_histogram(aes(fill = factor(ifelse(STUSPS == 'OK', 'OK', 'Other'))) , binwidth = 1, position = "stack", width = 1.0) +
   scale_x_discrete(breaks = mths_ge2005[seq(1, length(mths_ge2005), 12)], labels = yrs_ge2005) + scale_fill_manual(values = c("orange", "grey")) +
   ggtitle("Earthquakes in the U.S. by month since 2005, Oklahoma versus Others")
@@ -253,6 +268,8 @@ Stacked chart by year
 
 ```{r, message = F}
 ggplot(st_quakes_ge2005, aes(factor(year))) +
+  annotate("rect", xmin = "2010", xmax = Inf, ymin = 0, ymax = Inf,
+                   color = "red", fill = "#FFFAFC", linetype = "dashed") +  
   geom_histogram(aes(fill = factor(ifelse(STUSPS == 'OK', 'OK', 'Other'))) , binwidth = 1, position = "stack") +
   scale_fill_manual(values = c("orange", "grey")) +
   ggtitle("Earthquakes in the U.S. by year since 2005, Oklahoma versus Others")
@@ -271,16 +288,6 @@ ggplot(st_quakes_ge2005, aes(factor(year))) +
 
 
 
-Without Oklahoma: TK MOVE UP TO GRID
-
-```{r, message = F}
-
-ggplot(filter(st_quakes_ge2005, STUSPS != 'OK'), aes(factor(year_month))) +
-  geom_histogram(binwidth = 1, width = 1.0) +
-  scale_x_discrete(breaks = mths_ge2005[seq(1, length(mths_ge2005), 12)], labels = yrs_ge2005) +
-  ggtitle("Earthquakes in the U.S., not including Oklahoma")
-
-```
 
 
 
