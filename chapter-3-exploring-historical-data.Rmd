@@ -46,7 +46,7 @@ Load the map data and make two versions of it:
 us_map <- readOGR("./data/shp/cb_2014_us_state_20m.shp", "cb_2014_us_state_20m")
 states_map <- us_map[!us_map$STUSPS %in%
                         c('AS', 'DC', 'GU', 'MP', 'PR', 'VI'),]
-cg_map <- states_map[!states_map$STUSPS %in% c('AK', 'HI')]
+cg_map <- states_map[!states_map$STUSPS %in% c('AK', 'HI'), ]
 ```
 
 
@@ -56,7 +56,7 @@ TK explanation.
 
 
 ```{r}
-fn <- 'usgs-quakes-dump.csv'
+fn <- './data/usgs-quakes-dump.csv'
 zname <- paste(fn, 'zip', sep = '.')
 if (!file.exists(zname) || file.size(zname) < 2048){
   url <- paste("https://github.com/dannguyen/ok-earthquakes-RNotebook",
@@ -68,13 +68,21 @@ if (!file.exists(zname) || file.size(zname) < 2048){
 }
 unzip(zname, exdir="data")
 # read the data into a dataframe
-usgs_data <- read.csv(paste('data', fn, sep = '/'), stringsAsFactors=FALSE)
+usgs_data <- read.csv(fn, stringsAsFactors=FALSE)
 ```
 
 
 ```{r, message = F}
 # Remove all non earthquakes and events with magnitude less than 3.0:
 quakes <- usgs_data %>% filter(mag >= 3.0, type == 'earthquake')
+# Use lubridate to add a `year` and era column
+quakes <- quakes %>% mutate(year = year(time)) %>%
+    mutate(era = ifelse(year <= 2000, "1995-2000",
+      ifelse(year <= 2005, "2001-2005",
+      ifelse(year <= 2010, "2006-2010", "2011-2015"))))
+
+
+
 
 # Create a spatial data frame
 sp_quakes <- SpatialPointsDataFrame(data = quakes,
@@ -95,12 +103,57 @@ ggplot(zquakes, aes(STUSPS)) + geom_histogram(binwidth = 1)
 ```
 
 
+## Within comparisons: OK year over year
+
+## Full comparison: OK, number of earthquakes
+
+## Full/width, OK vs States,
+
+
+```{r}
+top_states <- (group_by(states_quakes, STUSPS) %>%
+  summarise(count = n()) %>% arrange(desc(count)) %>%
+  head(8))$STUSPS
+```
 
 
 
+## Something
+
+
+```{r}
+
+top_states_quakes <- filter(states_quakes, STUSPS %in% top_states)
+g <- ggplot(top_states_quakes, aes(x = as.character(year))) + 
+  geom_histogram(binwidth = 1, fill = "#999999")  +
+  geom_histogram(data=filter(top_states_quakes, year >= 2012), binwidth = 1, fill="#990000") + 
+  geom_histogram(data=filter(top_states_quakes, year == 2015), binwidth = 1, fill="#BB9999")
+
+g + facet_wrap(~ STUSPS, ncol = 4)   
+```
 
 
 
+## TKTK pie
+
+
+
+```{r}
+
+
+
+pct_quakes <- states_quakes %>%
+  filter(STUSPS %in% top_states) %>%
+  group_by(era, STUSPS) %>%
+  summarise(count = length(STUSPS)) %>%
+  group_by(STUSPS) %>% mutate(pct = count * 100/sum(count))
+
+ggplot(pct_quakes, aes(x = factor(1), y = pct, fill = era)) +
+  scale_fill_manual(values = c("#999999", "#666666", "#333333", "red")) +
+  geom_bar(width = 1, stat = "identity", size = 0.2 , aes(order = desc(era))) +
+  coord_polar(theta = "y") +
+  facet_wrap(~ STUSPS, ncol = 4)  + theme_dan_map()
+```
 
 
 
