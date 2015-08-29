@@ -1,0 +1,123 @@
+---
+title: "Chapter 3: Exploring the Historical Data"
+author: "Dan Nguyen"
+date: "August 17, 2015"
+output:
+  md_document:
+    variant: markdown_github
+---
+
+## Setup
+
+```{r, message = FALSE}
+# Load libraries
+library(ggplot2)
+require(grid)
+library(dplyr)
+library(lubridate)
+library(rgdal)
+
+# load my themes:
+source("./myslimthemes.R")
+theme_set(theme_dan())
+
+# create a data directory
+dir.create('./data')
+
+```
+
+Download the map data as before:
+
+```{r}
+fname <- "./data/cb_2014_us_state_20m.zip"
+if (!file.exists(fname)){
+  url <- "http://www2.census.gov/geo/tiger/GENZ2014/shp/cb_2014_us_state_20m.zip"
+  print(paste("Downloading: ", url))
+  download.file(url, fname)
+}
+unzip(fname, exdir = "./data/shp")
+```
+
+Load the map data and make two versions of it:
+- `states_map` removes all non-U.S. states, such as Washington D.C. and Guam:
+- `cg_map` removes all non-contiguous states, e.g. Alaska and Hawaii.
+
+```{r}
+us_map <- readOGR("./data/shp/cb_2014_us_state_20m.shp", "cb_2014_us_state_20m")
+states_map <- us_map[!us_map$STUSPS %in%
+                        c('AS', 'DC', 'GU', 'MP', 'PR', 'VI'),]
+cg_map <- states_map[!states_map$STUSPS %in% c('AK', 'HI')]
+```
+
+
+### Download the historical quake data
+
+TK explanation.
+
+
+```{r}
+fn <- 'usgs-quakes-dump.csv'
+zname <- paste(fn, 'zip', sep = '.')
+if (!file.exists(zname) || file.size(zname) < 2048){
+  url <- paste("https://github.com/dannguyen/ok-earthquakes-RNotebook",
+    "raw/master/data", zname, sep = '/')
+  print(paste("Downloading: ", url))
+  # note: if you have problems downloading from https, you might need to include
+  # RCurl
+  download.file(url, zname, method = "libcurl")
+}
+unzip(zname, exdir="data")
+# read the data into a dataframe
+usgs_data <- read.csv(paste('data', fn, sep = '/'), stringsAsFactors=FALSE)
+```
+
+
+```{r, message = F}
+# Remove all non earthquakes and events with magnitude less than 3.0:
+quakes <- usgs_data %>% filter(mag >= 3.0, type == 'earthquake')
+
+# Create a spatial data frame
+sp_quakes <- SpatialPointsDataFrame(data = quakes,
+                          coords = quakes[,c("longitude", "latitude")])
+sp_quakes@proj4string <- states_map@proj4string
+
+# subset for earthquakes in the U.S.
+xdf <- over(sp_quakes, states_map[, 'STUSPS'])
+states_quakes <- cbind(sp_quakes, xdf) %>% filter(!is.na(STUSPS))
+```
+
+# TODO
+- add year column, and era column
+
+```{r, message = F}
+zquakes <- filter(states_quakes, year(time) > 2009)
+ggplot(zquakes, aes(STUSPS)) + geom_histogram(binwidth = 1)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+<!--
+To render this file:
+library(rmarkdown)
+setwd("~/Dropbox/rprojs/ok-earthquakes-Rnotebook/")
+
+this_file <- 'chapter-3-exploring-historical-data.Rmd'
+render(this_file, output_dir = './builds',
+  html_document(toc = TRUE, self_contained = F))
+
+render(this_file, output_dir = './builds',
+  md_document(variant = "markdown_github",
+              preserve_yaml = TRUE))
+-->
+
+
+

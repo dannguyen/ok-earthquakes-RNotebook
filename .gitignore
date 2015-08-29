@@ -12,3 +12,5 @@ feed.xml
 .Rhistory
 *.html
 builds/
+# ignore massive files
+data/usgs-quakes-dump.csv
