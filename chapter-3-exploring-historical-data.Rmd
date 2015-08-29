@@ -28,7 +28,7 @@ dir.create('./data')
 
 Download the map data as before:
 
-```{r}
+```{r, message = F}
 fname <- "./data/cb_2014_us_state_20m.zip"
 if (!file.exists(fname)){
   url <- "http://www2.census.gov/geo/tiger/GENZ2014/shp/cb_2014_us_state_20m.zip"
@@ -42,7 +42,7 @@ Load the map data and make two versions of it:
 - `states_map` removes all non-U.S. states, such as Washington D.C. and Guam:
 - `cg_map` removes all non-contiguous states, e.g. Alaska and Hawaii.
 
-```{r}
+```{r, message = F}
 us_map <- readOGR("./data/shp/cb_2014_us_state_20m.shp", "cb_2014_us_state_20m")
 states_map <- us_map[!us_map$STUSPS %in%
                         c('AS', 'DC', 'GU', 'MP', 'PR', 'VI'),]
@@ -55,7 +55,7 @@ cg_map <- states_map[!states_map$STUSPS %in% c('AK', 'HI'), ]
 TK explanation.
 
 
-```{r}
+```{r, message = F}
 fn <- './data/usgs-quakes-dump.csv'
 zname <- paste(fn, 'zip', sep = '.')
 if (!file.exists(zname) || file.size(zname) < 2048){
@@ -76,7 +76,7 @@ usgs_data <- read.csv(fn, stringsAsFactors=FALSE)
 # Remove all non earthquakes and events with magnitude less than 3.0:
 quakes <- usgs_data %>% filter(mag >= 3.0, type == 'earthquake')
 # Use lubridate to add a `year` and era column
-quakes <- quakes %>% mutate(year = year(time)) %>%
+quakes <- quakes %>% mutate(year = year(time), year_month = strftime(time, "%Y-%m")) %>%
     mutate(era = ifelse(year <= 2000, "1995-2000",
       ifelse(year <= 2005, "2001-2005",
       ifelse(year <= 2010, "2006-2010", "2011-2015"))))
@@ -111,7 +111,7 @@ qcounts <- states_quakes %>% group_by(STUSPS) %>% summarise(count = n()) %>%
     arrange(desc(count))
 # create a vector
 qcounts$x1 <- factor(qcounts$STUSPS, levels = qcounts$STUSPS)
-ggplot(qcounts, aes(x1, count)) + 
+ggplot(qcounts, aes(x1, count)) +
   geom_bar(width = 0.5, stat = "identity") +
   geom_bar(data = filter(qcounts, STUSPS == "OK"),stat = "identity", fill = "orange", width = 0.5) +
    theme(axis.text.x = element_text(angle = 70)) + ggtitle("U.S. Earthquakes Since 1995")
@@ -119,7 +119,7 @@ ggplot(qcounts, aes(x1, count)) +
 
 Pick top 12:
 
-```{r}
+```{r, message = F}
 top_states <- head(qcounts, 12)$STUSPS
 top_quakes <- filter(states_quakes, states_quakes$STUSPS %in% top_states)
 ```
@@ -132,19 +132,24 @@ Plot a histogram of the earthquakes by state since 2010.
 
 ```{r, message = F}
 top_quakes$x1 <- factor(top_quakes$STUSPS, levels = as.vector(top_states))
-top_quakes.ge2010 <- filter(top_quakes, year >= 2010) 
-ggplot(top_quakes.ge2010, aes(x1)) + 
+top_quakes.ge2010 <- filter(top_quakes, year >= 2010)
+ggplot(top_quakes.ge2010, aes(x1)) +
   geom_histogram(binwidth = 1) +
   geom_histogram(data=filter(top_quakes.ge2010, STUSPS == "OK"), binwidth = 1, fill="orange") +
-  ggtitle("U.S. Earthquakes Since 2010")
+  ggtitle("U.S. Earthquakes (3.0+ mag) Since 2010")
 ```
 
 ## Within comparisons: OK year over year
 
-ObvTK there's a lot of action since the 2010s. Let's get a closer look:
+ObvTK there's a lot of action since the 2010s. Let's focus our look at just Oklahoma:
 
-```{r}
-ggplot(states_quakes
+
+
+
+```{r, message = F}
+ggplot(states_quakes, aes(strftime(time, '%Y-%m'))) +
+  geom_histogram(binwidth = 1) +
+  scale_x_discrete(breaks = unique(strftime(states_quakes$time, '%Y-%m'))[seq(1,28,7)])
 ```
 
 
@@ -162,7 +167,7 @@ ggplot(states_quakes
 ## Something
 
 
-```{r}
+```{r, message = F}
 
 top_states_quakes <- filter(states_quakes, STUSPS %in% top_states)
 g <- ggplot(top_states_quakes, aes(x = as.character(year))) +
@@ -179,7 +184,7 @@ g + facet_wrap(~ STUSPS, ncol = 4) + theme_dan_grid()
 
 
 
-```{r}
+```{r, message = F}
 
 
 
@@ -195,6 +200,95 @@ ggplot(pct_quakes, aes(x = factor(1), y = pct, fill = era)) +
   coord_polar(theta = "y") +
   facet_wrap(~ STUSPS, ncol = 4)  + theme_dan_map()
 ```
+
+
+
+## Counterpoint
+
+
+TK: Histogram by month, stacked with OK on top
+
+
+```{r, message = F}
+months <- unique(states_quakes$year_month)
+years = unique(states_quakes$year)
+```
+
+```{r, message = F}
+ggplot(states_quakes, aes(factor(year_month))) +
+  geom_histogram(binwidth = 1, width = 1) +
+  scale_x_discrete(breaks = months[seq(1, length(months), 12)], labels = years) +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+# TK Investigate 2002
+
+
+
+# OK on top
+
+For post-2005
+
+```{r, message = F}
+st_quakes_ge2005 <- filter(states_quakes, year >= 2005)
+mths_ge2005 <- months[months > "2005"]
+yrs_ge2005 <- years[years >= 2005]
+ggplot(st_quakes_ge2005, aes(factor(year_month))) +
+  geom_histogram(binwidth = 1, width = 1) +
+  scale_x_discrete(breaks = mths_ge2005[seq(1, length(mths_ge2005), 12)], labels = yrs_ge2005)
+```
+
+Stacked chart
+
+```{r, message = F}
+
+ggplot(st_quakes_ge2005, aes(factor(year_month))) +
+  geom_histogram(aes(fill = factor(ifelse(STUSPS == 'OK', 'OK', 'Other'))) , binwidth = 1, position = "stack", width = 1.0) +
+  scale_x_discrete(breaks = mths_ge2005[seq(1, length(mths_ge2005), 12)], labels = yrs_ge2005) + scale_fill_manual(values = c("orange", "grey")) +
+  ggtitle("Earthquakes in the U.S. by month since 2005, Oklahoma versus Others")
+
+```
+
+Stacked chart by year
+
+```{r, message = F}
+ggplot(st_quakes_ge2005, aes(factor(year))) +
+  geom_histogram(aes(fill = factor(ifelse(STUSPS == 'OK', 'OK', 'Other'))) , binwidth = 1, position = "stack") +
+  scale_fill_manual(values = c("orange", "grey")) +
+  ggtitle("Earthquakes in the U.S. by year since 2005, Oklahoma versus Others")
+```
+
+Stacked chart, ratio
+
+
+```{r, message = F}
+ggplot(st_quakes_ge2005, aes(factor(year))) +
+  geom_histogram(aes(fill = factor(ifelse(STUSPS == 'OK', 'OK', 'Other'))) , binwidth = 1, position = "fill") +
+  scale_fill_manual(values = c("orange", "grey")) +
+  ggtitle("Earthquakes in the U.S. by year since 2005, Oklahoma versus Others")
+```
+
+
+
+
+Without Oklahoma: TK MOVE UP TO GRID
+
+```{r, message = F}
+
+ggplot(filter(st_quakes_ge2005, STUSPS != 'OK'), aes(factor(year_month))) +
+  geom_histogram(binwidth = 1, width = 1.0) +
+  scale_x_discrete(breaks = mths_ge2005[seq(1, length(mths_ge2005), 12)], labels = yrs_ge2005) +
+  ggtitle("Earthquakes in the U.S., not including Oklahoma")
+
+```
+
+
+
+## Maps
+
+
+Justify the use of Hexbin map
+
 
 
 
