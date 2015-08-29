@@ -78,7 +78,7 @@ nrow(usgs_data)
 
 ```{r, message = F}
 # Remove all non earthquakes and events with magnitude less than 3.0:
-quakes <- usgs_data %>% filter(mag >= 3.0) %>% 
+quakes <- usgs_data %>% filter(mag >= 3.0) %>%
   filter(type == 'earthquake')
 nrow(quakes)
 ```
@@ -95,7 +95,7 @@ quakes <- mutate(quakes, era = ifelse(year <= 2000, "1995-2000",
           ifelse(year <= 2005, "2001-2005",
           ifelse(year <= 2010, "2006-2010", "2011-2015"))))
 
-                              #<- quakes %>% 
+                              #<- quakes %>%
 #  mutate(year = year(time), year_month = strftime(time, "%Y-%m")) %>%
 #  mutate(era = ifelse(year <= 2000, "1995-2000",
 #          ifelse(year <= 2005, "2001-2005",
@@ -176,27 +176,27 @@ ObvTK there's a lot of action since the 2010s. Let's focus our look at just Okla
 
 ```{r}
 ok_quakes <- filter(states_quakes, STUSPS == 'OK')
-ggplot(data = ok_quakes, aes(year)) + 
-  geom_histogram(binwidth = 1, fill = "gray50") + 
+ggplot(data = ok_quakes, aes(year)) +
+  geom_histogram(binwidth = 1, fill = "gray50") +
   geom_histogram(data = filter(ok_quakes, year >= 2012 & year < 2015), binwidth = 1, fill="#990000") +
-  geom_histogram(data = filter(ok_quakes, year == 2015), binwidth = 1, fill="#BB9F9F", color = "#990000", linetype = 'dashed') + 
-  ggtitle("Earthquakes of magnitude >= 3.0 in Oklahoma since 1995") 
+  geom_histogram(data = filter(ok_quakes, year == 2015), binwidth = 1, fill="#BB9F9F", color = "#990000", linetype = 'dashed') +
+  ggtitle("Earthquakes of magnitude >= 3.0 in Oklahoma since 1995")
 ```
 
 By month TK fix the label
 
 ```{r}
 ok_quakes <- filter(states_quakes, STUSPS == 'OK')
-ggplot(data = ok_quakes, aes(year_month)) + 
-  geom_histogram(binwidth = 1, fill = "gray50", width = 0.6) + 
+ggplot(data = ok_quakes, aes(year_month)) +
+  geom_histogram(binwidth = 1, fill = "gray50", width = 0.6) +
   geom_histogram(data = filter(ok_quakes, year >= 2012), binwidth = 1, fill="#990000", width = 0.6) +
   ggtitle("Earthquakes of magnitude >= 3.0 in Oklahoma since 1995") +
-  
-  stat_bin(data =  filter(ok_quakes, year_month == '2015-01'), 
-            binwidth = 1, geom = "text",  
-            aes(label = year_month), 
+
+  stat_bin(data =  filter(ok_quakes, year_month == '2015-01'),
+            binwidth = 1, geom = "text",
+            aes(label = year_month),
             hjust=1.1, size = 3.5)
-  #geom_text(data = filter(ok_quakes, year_month == '2014-01'), 
+  #geom_text(data = filter(ok_quakes, year_month == '2014-01'),
   #          aes(y = ..value..), label = 'X')
 ```
 
@@ -225,7 +225,7 @@ g <- ggplot(top_states_quakes, aes(x = as.character(year))) +
     geom_rect(data = filter(top_states_quakes, STUSPS == 'OK'), color = 'orange',
               fill = NA,
             xmin = -Inf, xmax = Inf, ymin = 0, ymax = Inf
-            ) + 
+            ) +
   geom_histogram(binwidth = 1, fill = "#999999", width = 1)  +
   geom_histogram(data=filter(top_states_quakes, year >= 2012), binwidth = 1, fill="#990000", width = 1) +
   geom_histogram(data=filter(top_states_quakes, year == 2015), binwidth = 1, fill="#BB9999", width = 1)
@@ -248,15 +248,15 @@ pct_quakes <- states_quakes %>%
   summarise(count = length(STUSPS)) %>%
   group_by(STUSPS) %>% mutate(pct = count * 100/sum(count))
 
-mygrid <- ggplot(pct_quakes, aes(x = factor(1), y = pct, fill = era)) +  
-  
+mygrid <- ggplot(pct_quakes, aes(x = factor(1), y = pct, fill = era)) +
+
 #  geom_rect(data = filter(pct_quakes, STUSPS == 'OK'), color = 'orange',
 #            size = 2.0, linetype = "dotted",
 #            xmin = -Inf, xmax = Inf, ymin = 0, ymax = Inf
-#            ) + 
+#            ) +
   scale_fill_manual(values = c("#999999", "#666666", "#333333", "red")) +
   geom_bar(width = 1, alpha = 0.6, stat = "identity", size = 0.2 , aes(order = desc(era))) +
-  geom_bar(data = filter(pct_quakes, STUSPS == 'OK'), 
+  geom_bar(data = filter(pct_quakes, STUSPS == 'OK'),
            alpha = 1.0,
            width = 1, stat = "identity", size = 0.2 , aes(order = desc(era))) +
 
@@ -264,7 +264,7 @@ mygrid <- ggplot(pct_quakes, aes(x = factor(1), y = pct, fill = era)) +
   coord_polar(theta = "y") +
   facet_wrap(~ STUSPS, ncol = 4)  + theme_dan_map()
 
-  #  geom_bar(data = filter(pct_quakes, STUSPS == 'OK'), color = 'green', 
+  #  geom_bar(data = filter(pct_quakes, STUSPS == 'OK'), color = 'green',
 #             width = 1, stat = "identity", size = 0.2 , aes(order = desc(era))) +
 
 mygrid
@@ -308,7 +308,7 @@ mths_ge2005 <- months[months > "2005"]
 yrs_ge2005 <- years[years >= 2005]
 myplot <- ggplot(st_quakes_ge2005, aes(factor(year_month))) +
   annotate("rect", xmin = "2010-01", xmax = Inf, ymin = 0, ymax = Inf,
-                   color = "red", fill = "#FFFAFC", linetype = "dashed")  
+                   color = "red", fill = "#FFFAFC", linetype = "dashed")
 myplot +
   geom_histogram(binwidth = 1, width = 1) +
   scale_x_discrete(breaks = mths_ge2005[seq(1, length(mths_ge2005), 12)], labels = yrs_ge2005)
@@ -324,7 +324,7 @@ Without Oklahoma: TK MOVE UP TO GRID, side by side.
   geom_histogram(data = filter(st_quakes_ge2005, STUSPS != 'OK'), binwidth = 1, width = 1.0) +
   scale_x_discrete(breaks = mths_ge2005[seq(1, length(mths_ge2005), 12)], labels = yrs_ge2005) +
 
-  ggtitle("Earthquakes in the U.S., not including Oklahoma") 
+  ggtitle("Earthquakes in the U.S., not including Oklahoma")
 
 ```
 
@@ -335,7 +335,7 @@ It's better to use a stacked chart to compare the makeup
 
 
 ```{r, message = F}
-  myplot + 
+  myplot +
   geom_histogram(aes(fill = is_OK) , binwidth = 1, position = "stack", width = 1.0) +
   scale_x_discrete(breaks = mths_ge2005[seq(1, length(mths_ge2005), 12)], labels = yrs_ge2005) + scale_fill_manual(values = c("orange", "grey")) +
   ggtitle("Earthquakes in the U.S. by month since 2005, Oklahoma versus Others")
@@ -347,7 +347,7 @@ Stacked chart by year
 ```{r, message = F}
 ggplot(st_quakes_ge2005, aes(factor(year))) +
   annotate("rect", xmin = "2010", xmax = Inf, ymin = 0, ymax = Inf,
-                   color = "red", fill = "#FFFAFC", linetype = "dashed") +  
+                   color = "red", fill = "#FFFAFC", linetype = "dashed") +
   geom_histogram(aes(fill = factor(ifelse(STUSPS == 'OK', 'OK', 'Other'))) , binwidth = 1, position = "stack") +
   scale_fill_manual(values = c("orange", "grey")) +
   ggtitle("Earthquakes in the U.S. by year since 2005, Oklahoma versus Others")
@@ -369,10 +369,9 @@ ggplot(st_quakes_ge2005, aes(factor(year))) +
 
 
 
-## Maps
 
 
-Justify the use of Hexbin map
+
 
 
 

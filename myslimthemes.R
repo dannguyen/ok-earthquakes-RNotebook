@@ -36,7 +36,7 @@ theme_dan_grid <- function(){
     theme_dan() + theme(
       plot.margin = unit(c(0, 0, 0, 0), "cm"),
       panel.margin = unit(0, "cm"),
-      strip.text.x = element_text(size = rel(2.5)),
+      strip.text.x = element_text(size = rel(1.2)),
       axis.text.x = element_blank()
     )
 }
