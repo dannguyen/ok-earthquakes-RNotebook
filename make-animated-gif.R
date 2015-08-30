@@ -119,8 +119,12 @@ make_quake_histogram <- function(yrmth){
     scale_y_continuous(breaks=c(100, 200), expand = c(0, 0), limits = c(0, 200)) +
     scale_x_discrete(breaks = c(yrmth), labels = c(this_title)) +
     scale_fill_manual(values = c("#FF6600", "grey")) +
-    annotate("text", x = "2005-02", y = 70, size = rel(1.4), hjust = 0,
-        label = c("Earthquakes of at least magnitude 3.0\nin the contiguous United States.\nOklahoma's portion of earthquakes\n is in orange.\n\nChart by Dan Nguyen @dancow | Stanford Computational Journalism")) +
+    annotate("text", x = "2005-01", y = 60, size = rel(1.5), hjust = 0,
+               label = c("Earthquakes of at least magnitude 3.0\nin the contiguous United States.\n\nChart by Dan Nguyen @dancow\nStanford Computational Journalism")
+            ) +
+    annotate("text", x = "2013-01", y = 35, size = rel(1.5), hjust = 0,
+               label = "Oklahoma's portion of earthquakes\nis colored in orange."
+            ) +
     theme(axis.text.x = element_text(color = "black", hjust = x_lbl_hjust ,
               size = rel(0.4)),
           legend.position="none",
@@ -158,11 +162,16 @@ make_clips <- function(items){
 print("Making stills!")
 yrmths = unique(cg_quakes$year_month)
 make_clips(yrmths)
-print("Making it animated!")
+print("Making animated GIF!")
 system("convert -delay 15 /tmp/movie-quakes/composite-*.png /tmp/movie-quakes/movie-quakes-OK.gif")
-print("Making a small version")
 system("convert /tmp/movie-quakes/movie-quakes-OK.gif -resize 60% /tmp/movie-quakes/movie-quakes-OK-med.gif")
 system("convert /tmp/movie-quakes/movie-quakes-OK.gif -resize 30% /tmp/movie-quakes/movie-quakes-OK-small.gif")
+
+print("Making optimized version!")
+system("gifsicle -O3 --colors 64 /tmp/movie-quakes/movie-quakes-OK.gif > /tmp/movie-quakes/optimized-movie-quakes-OK.gif")
+system("gifsicle -O3 --colors 64 --resize-width 1000 /tmp/movie-quakes/movie-quakes-OK.gif > /tmp/movie-quakes/optimized-movie-quakes-OK-med.gif")
+system("gifsicle -O3 --colors 64 --resize-width 600 /tmp/movie-quakes/movie-quakes-OK.gif > /tmp/movie-quakes/optimized-movie-quakes-OK-small.gif")
+
 
 # I give up...avconv does not like image piping
 print("Make a movie")
@@ -170,10 +179,10 @@ system('
   x=1;
   for i in /tmp/movie-quakes/composite*.png;
   do counter=$(printf %03d $x);
-  echo ln -s $i /tmp/movie-quakes/tmpimage-$counter.png;
+  ln -s $i /tmp/movie-quakes/_tmpimage-$counter.png;
   x=$(($x+1));
   done')
-system("avconv -y -r 5 -i /tmp/movie-quakes/tmpimage-%03d.png /tmp/movie-quakes/movie-quakes-OK.mp4")
+system("avconv -y -r 5 -i /tmp/movie-quakes/_tmpimage-%03d.png /tmp/movie-quakes/movie-quakes-OK.mp4")
 
 print("all done")
 
