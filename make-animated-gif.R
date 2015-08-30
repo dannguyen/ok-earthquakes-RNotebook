@@ -1,10 +1,11 @@
+
+options(warn=-1)
+
 library(ggplot2)
 require(grid)
 library(dplyr)
 library(lubridate)
 library(rgdal)
-library(maptools)
-require(gridExtra)
 
 setwd("~/Dropbox/rprojs/ok-earthquakes-Rnotebook/")
 source("./myslimthemes.R")
@@ -42,7 +43,7 @@ if (!file.exists(zname) || file.size(zname) < 2048){
 }
 unzip(zname, exdir="data")
 # read the data into a dataframe
-print("Reading USGS data")
+print("Reading 20 years worth of USGS earthquake data")
 usgs_data <- read.csv(fn, stringsAsFactors = FALSE)
 
 
@@ -81,13 +82,13 @@ make_quake_map <- function(yrmth){
     # add last month decay
     geom_point(data = last_mth_data, aes(longitude, latitude),
                  size = 1.3,
-                 alpha = 0.1,
+                 alpha = 0.2,
                  color = '#CC7777')  +
     # add this month
     geom_point(data = this_data, aes(longitude, latitude),
                  size = 1.5,
-                 alpha = 0.5,
-                 shape = 1,
+                 alpha = 0.3,
+                 shape = 8,
                  color = '#990000')  +
 
 
@@ -104,10 +105,11 @@ make_quake_map <- function(yrmth){
 gggbar <- ggplot(cg_quakes, aes(factor(year_month))) +
             geom_histogram(alpha = 0.3, aes(fill = is_OK),
             binwidth = 1, position = "stack", width = 1.0)
+
 make_quake_histogram <- function(yrmth){
   this_data <- filter(cg_quakes, year_month == yrmth)
   gggbar +
-    geom_histogram(data = this_data, alpha = 1.0,
+    geom_histogram(data = this_data, alpha = 1.0, color = "#444444", size = 0.1,
       aes(fill = is_OK), binwidth = 1, position = "stack", width = 1.0) +
 
     scale_y_continuous(breaks=c(0, 100)) +
@@ -141,40 +143,13 @@ make_clips <- function(items){
 
 #######################################
 # Let's go
-print("Making a movie!")
-yrmths = unique(cg_quakes$year_month)[90:110]
+print("Making stills!")
+yrmths = unique(cg_quakes$year_month)
 make_clips(yrmths)
-system("convert -delay 10 /tmp/movie-quakes/composite-*.png /tmp/movie-quakes/movie-quakes-OK.gif")
+print("Making it animated!")
+system("convert -delay 15 /tmp/movie-quakes/composite-*.png /tmp/movie-quakes/movie-quakes-OK.gif")
+print("Making a small version")
+system("convert /tmp/movie-quakes/movie-quakes-OK.gif -resize 50% /tmp/movie-quakes/movie-quakes-OK-small.gif")
+print("all done")
 
-
-# convert -size 3000x2000 xc:white composite.png
-# composite -geometry +0+800 histogram-2005-10.png composite.png composite.png
-# composite -geometry +0+100 map-2005-10.png composite.png composite.png
-
-
-
-
-# make_it_so <- function(yrmth){
-#   mymap <- make_quake_map(yrmth) +
-#         theme(plot.margin=unit(c(-2.5, -2, -2.5, -2), "cm")) +
-#         strip_backs()
-#   mybar <- make_quake_histogram(yrmth) + strip_backs()
-
-
-#   grid.arrange(mymap, mybar, ncol = 2)
-# }
-
-
-
-
-# make_movie <- function(items){
-#   lapply(items, function(ym) {
-#     fname <- paste("/tmp/mymovie-", ym, '.png', sep = "")
-#     ggsave(fname, height=5, width=10, plot = make_it_so(ym), device = 'png')
-#     print(fname)
-#   }
-# )}
-
-#make_movie(yrmths)
-
-#saveGIF(make_movie(yrmths), interval = .1, movie.name="/tmp/quakes2.gif")
+30
