@@ -175,7 +175,7 @@ Plot a histogram of the earthquakes by state since 2010.
 top_quakes$x1 <- factor(top_quakes$STUSPS, levels = top_states)
 ggplot(data = filter(top_quakes, year >= 2010), aes(x1)) +
   geom_histogram(binwidth = 1) +
-  geom_histogram(data=filter(top_quakes.ge2010, STUSPS == "OK"), binwidth = 1, fill="orange") +
+  geom_histogram(data=filter(top_quakes, STUSPS == "OK", year >= 2010), binwidth = 1, fill="orange") +
   ggtitle("U.S. Earthquakes (3.0+ mag) Since 2010")
 ```
 
@@ -188,7 +188,7 @@ ok_quakes <- filter(states_quakes, STUSPS == 'OK')
 ggplot(data = ok_quakes, aes(year)) +
   geom_histogram(binwidth = 1, fill = "gray50") +
   geom_histogram(data = filter(ok_quakes, year >= 2012 & year < 2015), binwidth = 1, fill="#990000") +
-  geom_histogram(data = filter(ok_quakes, year == 2015), binwidth = 1, fill="#BB9F9F", color = "#990000", linetype = 'dashed') +
+  geom_histogram(data = filter(ok_quakes, year == 2015), binwidth = 1, fill="#990000", color = "#FFFFFF", linetype = 'dashed', size = 1.0) +
   ggtitle("Earthquakes of magnitude >= 3.0 in Oklahoma since 1995")
 ```
 
@@ -199,12 +199,15 @@ ok_quakes <- filter(states_quakes, STUSPS == 'OK')
 ggplot(data = ok_quakes, aes(year_month)) +
   geom_histogram(binwidth = 1, fill = "gray50", width = 0.6) +
   geom_histogram(data = filter(ok_quakes, year >= 2012), binwidth = 1, fill="#990000", width = 0.6) +
-  ggtitle("Earthquakes of magnitude >= 3.0 in Oklahoma since 1995") +
+  scale_x_discrete(breaks=c("2008-01", "2012-01", "2014-01")) +
+   theme(axis.text.x = element_text(angle = 90)) +
+  ggtitle("Earthquakes of magnitude >= 3.0 in Oklahoma since 1995")
 
-  stat_bin(data =  filter(ok_quakes, year_month == '2015-01'),
-            binwidth = 1, geom = "text",
-            aes(label = year_month),
-            hjust=1.1, size = 3.5)
+  # stat_bin(data =  filter(ok_quakes, year_month == '2015-01'),
+  #           binwidth = 1, geom = "text",
+  #           aes(label = year_month),
+  #           hjust=1.1, size = 3.5)
+
   #geom_text(data = filter(ok_quakes, year_month == '2014-01'),
   #          aes(y = ..value..), label = 'X')
 ```

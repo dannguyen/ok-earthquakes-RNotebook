@@ -68,13 +68,13 @@ gggmap <- ggplot() +
   geom_polygon(data = cg_map, aes(x = long, y = lat, group = group),
                    fill = "transparent", color = "#444444", size = 0.1) +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
-                   fill = "transparent", color = "#FF6600", size = 0.5)
+                   fill = "transparent", color = "#FF6600", size = 0.2)
 
 make_quake_map <- function(yrmth){
   this_data <- filter(cg_quakes, year_month == yrmth)
   # make a title
   current_date <- ymd(paste(yrmth, '02', sep = '-'))
-  this_title <- strftime(current_date, "%B %Y")
+  this_title <- strftime(current_date, "%Y\n%B")
   # make decay data
   last_mth <- strftime(current_date %m-% months(1), '%Y-%m')
   last_mth_data <- filter(cg_quakes, year_month == last_mth)
@@ -82,12 +82,13 @@ make_quake_map <- function(yrmth){
     # add last month decay
     geom_point(data = last_mth_data, aes(longitude, latitude),
                  size = 1.3,
-                 alpha = 0.2,
-                 color = '#CC7777')  +
+                 alpha = 0.3,
+                 shape = 1,
+                 color = '#DDBBBB')  +
     # add this month
     geom_point(data = this_data, aes(longitude, latitude),
                  size = 1.5,
-                 alpha = 0.3,
+                 alpha = 0.25,
                  shape = 8,
                  color = '#990000')  +
 
@@ -95,10 +96,10 @@ make_quake_map <- function(yrmth){
     coord_map("albers", lat0 = 38, latl = 42) +
     theme_dan_map() +
     theme(
-      plot.margin=unit(c(-0.5, -1, 0, -1), "cm"),
-      axis.title = element_text(color = 'black', size = rel(0.8)),
-      axis.title.y = element_blank()) +
-      labs(x = this_title)
+      plot.margin=unit(c(-0.5, -1, 0, -1), "cm")) #,
+#      axis.title = element_text(color = 'black', size = rel(0.8))) #,
+#      axis.title.y = element_blank()) +
+#      labs(x = this_title)
 }
 
 
@@ -107,17 +108,28 @@ gggbar <- ggplot(cg_quakes, aes(factor(year_month))) +
             binwidth = 1, position = "stack", width = 1.0)
 
 make_quake_histogram <- function(yrmth){
+  current_date <- ymd(paste(yrmth, '02', sep = '-'))
+  this_title <- strftime(current_date, "%Y\n%B")
+  # hardcoding this because I'm a weenie
+  x_lbl_hjust = ifelse(yrmth > "2015", 1.0, 0.0)
   this_data <- filter(cg_quakes, year_month == yrmth)
   gggbar +
     geom_histogram(data = this_data, alpha = 1.0, color = "#444444", size = 0.1,
       aes(fill = is_OK), binwidth = 1, position = "stack", width = 1.0) +
-
-    scale_y_continuous(breaks=c(0, 100)) +
+    scale_y_continuous(breaks=c(100, 200), expand = c(0, 0), limits = c(0, 200)) +
+    scale_x_discrete(breaks = c(yrmth), labels = c(this_title)) +
     scale_fill_manual(values = c("#FF6600", "grey")) +
-    theme(axis.text.x = element_blank(), legend.position="none",
-      axis.text.y = element_text(size = rel(0.5), hjust = 0.0, color = "#666666"),
-      panel.grid.major = element_line(size = 0.2, colour = "#777777",
-        linetype = "dotted")
+    annotate("text", x = "2005-02", y = 70, size = rel(1.4), hjust = 0,
+        label = c("Earthquakes of at least magnitude 3.0\nin the contiguous United States.\nOklahoma's portion of earthquakes\n is in orange.\n\nChart by Dan Nguyen @dancow | Stanford Computational Journalism")) +
+    theme(axis.text.x = element_text(color = "black", hjust = x_lbl_hjust ,
+              size = rel(0.4)),
+          legend.position="none",
+          axis.line = element_line(color = "#666666", size = 0.1),
+          axis.line.x = element_line(color = "#666666", size = 0.1),
+          axis.line.y = element_blank(),
+          axis.text.y = element_text(size = rel(0.5), hjust = 0.0, color = "#666666"),
+          panel.grid.major = element_line(size = 0.2, colour = "#555555",
+            linetype = "dotted")
       )
 }
 
@@ -149,7 +161,20 @@ make_clips(yrmths)
 print("Making it animated!")
 system("convert -delay 15 /tmp/movie-quakes/composite-*.png /tmp/movie-quakes/movie-quakes-OK.gif")
 print("Making a small version")
-system("convert /tmp/movie-quakes/movie-quakes-OK.gif -resize 50% /tmp/movie-quakes/movie-quakes-OK-small.gif")
+system("convert /tmp/movie-quakes/movie-quakes-OK.gif -resize 60% /tmp/movie-quakes/movie-quakes-OK-med.gif")
+system("convert /tmp/movie-quakes/movie-quakes-OK.gif -resize 30% /tmp/movie-quakes/movie-quakes-OK-small.gif")
+
+# I give up...avconv does not like image piping
+print("Make a movie")
+system('
+  x=1;
+  for i in /tmp/movie-quakes/composite*.png;
+  do counter=$(printf %03d $x);
+  echo ln -s $i /tmp/movie-quakes/tmpimage-$counter.png;
+  x=$(($x+1));
+  done')
+system("avconv -y -r 5 -i /tmp/movie-quakes/tmpimage-%03d.png /tmp/movie-quakes/movie-quakes-OK.mp4")
+
 print("all done")
 
 30

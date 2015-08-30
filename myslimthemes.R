@@ -12,8 +12,8 @@ theme_dan <- function(){
     legend.key.width = unit(0.1, 'cm'),
     legend.title = element_blank(),
     panel.background = element_blank(),
-    panel.grid.major = element_line(size = 0.3, colour = "#555555",
-      linetype = "dotted"),
+    panel.grid.major = element_line(size = 0.3, colour = "#666666",
+      linetype = "dashed"),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank()
   )
@@ -37,6 +37,7 @@ theme_dan_grid <- function(){
       plot.margin = unit(c(0, 0, 0, 0), "cm"),
       panel.margin = unit(0, "cm"),
       strip.text.x = element_text(size = rel(1.2)),
-      axis.text.x = element_blank()
+      axis.text.x = element_blank(),
+      panel.grid.major = element_blank()
     )
 }
