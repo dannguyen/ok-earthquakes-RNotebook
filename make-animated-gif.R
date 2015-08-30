@@ -1,9 +1,6 @@
 # Note: This script is horseshit. Do not use it in its current state
 #       - Dan
-
-
-options(warn=-1)
-
+options(warn = -1)
 library(ggplot2)
 require(grid)
 library(dplyr)
@@ -13,7 +10,6 @@ library(rgdal)
 setwd("~/Dropbox/rprojs/ok-earthquakes-Rnotebook/")
 source("./myslimthemes.R")
 theme_set(theme_dan())
-
 ##############################################################
 # download map data
 fname <- "./data/cb_2014_us_state_20m.zip"
@@ -75,41 +71,23 @@ gggmap <- ggplot() +
 
 make_quake_map <- function(yrmth){
   this_data <- filter(cg_quakes, year_month == yrmth)
-  # make a title
-  current_date <- ymd(paste(yrmth, '02', sep = '-'))
-  this_title <- strftime(current_date, "%Y\n%B")
-  # make decay data
-  last_mth <- strftime(current_date %m-% months(1), '%Y-%m')
-  last_mth_data <- filter(cg_quakes, year_month == last_mth)
   gggmap +
-    # add last month decay
-    geom_point(data = last_mth_data, aes(longitude, latitude),
-                 size = 1.3,
-                 alpha = 0.3,
-                 shape = 1,
-                 color = '#DDBBBB')  +
-    # add this month
     geom_point(data = this_data, aes(longitude, latitude),
                  size = 1.5,
                  alpha = 0.25,
                  shape = 8,
                  color = '#990000')  +
-
-
     coord_map("albers", lat0 = 38, latl = 42) +
     theme_dan_map() +
-    theme(
-      plot.margin=unit(c(-0.5, -1, 0, -1), "cm")) #,
-#      axis.title = element_text(color = 'black', size = rel(0.8))) #,
-#      axis.title.y = element_blank()) +
-#      labs(x = this_title)
+    theme(plot.margin=unit(c(-0.5, -1, 0, -1), "cm"))
 }
 
 
 gggbar <- ggplot(cg_quakes, aes(factor(year_month))) +
-            geom_histogram(alpha = 0.3, aes(fill = is_OK),
-            binwidth = 1, position = "stack", width = 1.0)
+          geom_histogram(alpha = 0.3, aes(fill = is_OK),
+                         binwidth = 1, position = "stack", width = 1.0)
 
+# LOLOL:
 make_quake_histogram <- function(yrmth){
   current_date <- ymd(paste(yrmth, '02', sep = '-'))
   this_title <- strftime(current_date, "%Y\n%B")
@@ -144,6 +122,7 @@ make_quake_histogram <- function(yrmth){
 ##############################################################
 # The image making function
 make_clips <- function(items){
+  # I think this is how you do a loop in R(???)
   lapply(items, function(ym) {
     comp_name = paste("/tmp/movie-quakes/composite-", ym, '.png', sep = "")
     m_name <- paste("/tmp/movie-quakes/map-", ym, '.png', sep = "")
@@ -153,7 +132,7 @@ make_clips <- function(items){
     ggsave(b_name, height=2, width=5, plot = make_quake_histogram(ym),
       device = 'png', bg="transparent")
     print(as.character(ym))
-
+    # Here's where I gave up on R. Good ol Bash and ImageMagick saves the day
     system(paste("convert -size 1500x1000 xc:white", comp_name))
     system(paste("composite -geometry +0+400", b_name, comp_name, comp_name))
     system(paste("composite -geometry +0+0", m_name, comp_name, comp_name))
@@ -189,4 +168,4 @@ system("avconv -y -r 5 -i /tmp/movie-quakes/_tmpimage-%03d.png /tmp/movie-quakes
 
 print("all done")
 
-30
+30 # I put this here because the script crashes on print for some reason. Whatever
