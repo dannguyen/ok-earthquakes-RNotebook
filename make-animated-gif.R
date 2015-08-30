@@ -1,3 +1,6 @@
+# Note: This script is horseshit. Do not use it in its current state
+#       - Dan
+
 
 options(warn=-1)
 
