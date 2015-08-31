@@ -6,14 +6,14 @@ theme_dan <- function(){
   theme(
     axis.text = element_text(colour = "#555555"),
     axis.line = element_line(size = 0.1, linetype = "solid", color = "#444444"),
-    axis.line.x = element_blank(),
+    axis.ticks = element_blank(),
     axis.title = element_blank(),
     legend.position = "right",
     legend.key.width = unit(0.1, 'cm'),
     legend.title = element_blank(),
     panel.background = element_blank(),
     panel.grid.major = element_line(size = 0.3, colour = "#666666",
-      linetype = "dashed"),
+      linetype = "dotted"),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank()
   )
@@ -29,6 +29,7 @@ theme_dan_map <- function(){
       panel.grid.major = element_blank()
     )
 }
+
 
 
 

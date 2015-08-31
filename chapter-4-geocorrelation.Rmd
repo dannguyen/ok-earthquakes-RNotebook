@@ -1,4 +1,3 @@
-
 ---
 title: "Chapter 4: Geolocation data"
 author: "Dan Nguyen"
@@ -12,6 +11,7 @@ Questions to answer:
 - What are the geospatial characteristics of the recent Earthquakes?
 - Is the recent spurt of earthquakes located in one area?
 - What is the correlation between well activity and earthquakes?
+
 
 ## Setup
 
