@@ -15,6 +15,11 @@ Questions to answer:
 
 ## Setup
 
+
+- [readxl](https://github.com/hadley/readxl) - Later on we'll need to read from an XLS file. Again, via Hadley Wickham.
+
+
+
 ```{r, message = FALSE}
 # Load libraries
 library(ggplot2)

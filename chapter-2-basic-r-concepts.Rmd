@@ -15,24 +15,24 @@ output:
 
 ## Loading the libraries and themes
 
-```{r, message = FALSE}
+```{r, message = FALSE, warning = FALSE}
 library(ggplot2)
-require(grid)
+library(scales)
+library(grid)
 library(dplyr)
 library(lubridate)
 library(rgdal)
-library(maptools)
 ```
 
 - [ggplot2](http://ggplot2.org/) is _the_ visualization framework. Made by Hadley Wickham.
 - [dplyr](https://cran.rstudio.com/web/packages/dplyr/vignettes/introduction.html), also made by Hadley Wickham, is a library for manipulating dataframes and includes transformations such as `mutate()` and `filter()` as well as aggregation functions. It also has [nice piping](http://seananderson.ca/2014/09/13/dplyr-intro.html), which warms the Unix programmer inside me.
-- [lubridate](https://github.com/hadley/lubridate) - I include Wickham's time-handling library only for its convenience functions, such as [year()](https://cran.r-project.org/web/packages/lubridate/vignettes/lubridate.html), which seems like overkill if you've never dealt with trying to parse time values as a programmer. Think of it as [moment.js for R](http://momentjs.com/).
-- [readxl](https://github.com/hadley/readxl) - Later on we'll need to read from an XLS file. Again, via Hadley Wickham.
+- [lubridate](https://github.com/hadley/lubridate) - Another Wickham creation that greatly eases working with time values, which will be helpful when generating time-series and time-based filters. Think of it as [moment.js for R](http://momentjs.com/).
+- [scales](https://github.com/hadley/scales) - Yet another Wickham library, this one is focused on properly scaling axes, among other things, which is particularly helpful for us in making time-series.
 - [grid](https://stat.ethz.ch/R-manual/R-devel/library/grid/html/grid-package.html) - contains some functionality that ggplot2 uses for chart styling, particularly the [unit()](https://stat.ethz.ch/R-manual/R-devel/library/grid/html/unit.html) function.
 - [rgdal](https://cran.r-project.org/web/packages/rgdal/index.html) - bindings for geospatial operations, including map projection and the reading of map shapefiles. Can be a bear to install due to a variety of dependencies. If you're on OS X, I recommend [installing Homebrew](http://brew.sh/) and running `brew install gdal` before installing the rgdal package via R.
 
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 source("./myslimthemes.R")
 theme_set(theme_dan())
 ```
@@ -60,7 +60,7 @@ If you're following along many years from now and the above links no longer work
 
 First we create a data directory to store our files:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 dir.create('./data')
 ```
 
@@ -70,7 +70,7 @@ dir.create('./data')
 Because the data files can get big, I've included an `if` statement so that if a file exists at `./data/all_month.csv`, the `download` command won't attempt to re-download the file.
 
 
-```{r, message = FALSE}
+```{r, message = FALSE, warning = FALSE}
 url <- "http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.csv"
 fname <- "./data/all_month.csv"
 if (!file.exists(fname)){
@@ -81,7 +81,7 @@ if (!file.exists(fname)){
 
 The standard __read.csv()__ function can be used to convert the CSV file into a data frame, which I store into a variable named `usgs_data`:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 usgs_data <- read.csv(fname, stringsAsFactors = FALSE)
 ```
 
@@ -89,7 +89,7 @@ usgs_data <- read.csv(fname, stringsAsFactors = FALSE)
 
 ### Download and read the map data
 
-```{r, message = FALSE}
+```{r, message = FALSE, warning = FALSE}
 url <- "http://www2.census.gov/geo/tiger/GENZ2014/shp/cb_2014_us_state_20m.zip"
 fname <- "./data/cb_2014_us_state_20m.zip"
 if (!file.exists(fname)){
@@ -101,7 +101,7 @@ unzip(fname, exdir = "./data/shp")
 
 Inside the `data/` directory should be a subdirectory named `shp/` with a variety of data files. Using the __rgdal__ library, we use the `readOGR()` command to read the shape file, convert it to a __SpatialPolygonsDataFrame__-type object, and assign it to the variable `us_map`:
 
-```{r, message = FALSE}
+```{r, message = FALSE, warning = FALSE, results = "hide"}
 us_map <- readOGR("./data/shp/cb_2014_us_state_20m.shp", "cb_2014_us_state_20m")
 ```
 
@@ -115,25 +115,25 @@ Going forward, we can work knowing that `usgs_data` and `us_map` contain data fr
 
 Let's count how many earthquake records there are in a month's worth of USGS earthquake data:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 nrow(usgs_data)
 ```
 
 The USGS data feed contains more than just earthquakes, though. So we use dplyr's  __group_by()__ function on the `type` column and then __summarise()__ the record counts:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 usgs_data %>% group_by(type) %>% summarise(count = n())
 ```
 
 For this particular journalstic endeavour, we don't care about explosions and quarry blasts. We also only care about events of a reasonable magnitude &ndash; [remember that magnitudes under 3.0 are often not even noticed by the average person](http://earthquake.usgs.gov/learn/topics/mag_vs_int.php). Let's use `group_by()` and `summarise()` again, but faceted around the `mag` column (rounded to the nearest integer), to see the distribution:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 usgs_data %>% group_by(round(mag)) %>% summarise(count = n())
 ```
 
 And to get warmed up for visualization with __ggplot2__, let's view the distribution with a histogram; note that the use of __geom_histogram()__ obiviates the need to do a summarization:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 ggplot(usgs_data, aes(x = round(mag))) +
   geom_histogram(binwidth = 1) +
   scale_x_discrete()
@@ -141,13 +141,13 @@ ggplot(usgs_data, aes(x = round(mag))) +
 
 The [July 28, 2015 Reuters report](https://news.yahoo.com/more-bigger-drilling-linked-earthquakes-rattle-oklahoma-073805543.html) focused on Oklahoma earthquakes of 3.0 magnitude or above, so let's filter `usgs_data` appropriately and store it in a variable named `quakes`:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 quakes <- usgs_data %>% filter(mag >= 3.0, type == 'earthquake')
 ```
 
 The `quakes` dataframe is now about a tenth the size of the data we original downloaded, which will work just fine for our purposes:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 nrow(quakes)
 ```
 
@@ -156,7 +156,7 @@ nrow(quakes)
 
 It's worth remembering that a geographical map can be thought of a [plain ol' scatter plot](http://docs.ggplot2.org/0.9.3/geom_point.html). In this case, each dot is plotted using the __longitude__ and __latitude__ values, which serve as the __x__ and __y__ coordinates, respectively:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 ggplot(quakes, aes(x = longitude, y = latitude)) + geom_point()
 ```
 
@@ -176,7 +176,7 @@ And just to add some variety, I'll change the [color](http://www.stat.columbia.e
 
 We can apply these styles in the `geom_point()` call:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 ggplot(quakes, aes(x = longitude, y = latitude)) +
   geom_point(size = 3,
              alpha = 0.2,
@@ -189,7 +189,7 @@ ggplot(quakes, aes(x = longitude, y = latitude)) +
 Obviously, some earthquakes are more momentous than others. An easy way to show this would be to vary the _size_ of the point by `mag`:
 
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 ggplot(quakes, aes(x = longitude, y = latitude)) +
   geom_point(aes(size = mag),
              alpha = 0.2,
@@ -197,9 +197,7 @@ ggplot(quakes, aes(x = longitude, y = latitude)) +
              color = 'firebrick')
 ```
 
-However, this understates the difference between earthquakes; remember that moving up [_one_ step means an increase in energy release by a __factor of 32__; __two__ steps is a factor of __1000__](https://en.wikipedia.org/wiki/Richter_magnitude_scale). Scaling the circles accurately will be...a little awkward. And I also don't know enough about ggplot to map the legend's labels to the proper non-transformed values. In any case, for the purposes of this investigation, we mostly care about the _frequency_ of earthquakes, rather than their actual magnitudes, so I'll leave out the size aesthetic in the examples.
-
-
+However, this understates the difference between earthquakes, as their magnitudes are measured on a logarithmic scale; a M5.0 earthquake has 100 times the amplitude of a M3.0 earthquake.  Scaling the circles accurately and fitting them on the map would be...a little awkward (and I also don't know enough about ggplot to map the legend's labels to the proper non-transformed values). In any case, for the purposes of this investigation, we mostly care about the _frequency_ of earthquakes, rather than their actual magnitudes, so I'll leave out the size aesthetic in my examples.
 
 Let's move on to plotting the boundaries of the United States.
 
@@ -210,15 +208,15 @@ The data contained in the `us_map` variable is actually a _kind_ of data frame, 
 
 Since `us_map` is a data frame, it's pretty easy to plop it right into ggplot():
 
-```{r, message = FALSE}
+```{r, message = FALSE, warning = FALSE}
 ggplot() +
   geom_polygon(data = us_map, aes(x = long, y = lat, group = group)) +
    theme_dan_map()
 ```
 
-By default, things look a little squished because the longitude and latitude values are treated as values on a flat, 2-dimensional plane. As we've learned, the world is _not_ flat. So to have the geographical points -- in this case, the polygons that make up state boundaries -- look more like we're accustomed to on a globe, we have to _project_ the coordinates.
+By default, things look a little distorted because the longitude and latitude values are treated as values on a flat, 2-dimensional plane. As we've learned, the world is _not_ flat. So to have the geographical points -- in this case, the polygons that make up state boundaries -- look more like we're accustomed to on a globe, we have to _project_ the longitude/latitude values to a different coordinate system.
 
-This is a cartographic concept that is beyond my ability to concisely and intelligibly explain, so I direct you to Michael Corey, of the Center for Investigative Reporting, and his explainer, ["Choosing the Right Map Projection"](https://source.opennews.org/en-US/learning/choosing-right-map-projection/). And Mike Bostock has a series of [excellent interactive examples showing some of the complexities of map projection](http://bost.ocks.org/mike/example/#1); I embed one of his D3 examples below:
+This is a fundamental cartographic concept that is beyond my ability to concisely and intelligibly explain here, so I direct you to Michael Corey, of the Center for Investigative Reporting, and his explainer, ["Choosing the Right Map Projection"](https://source.opennews.org/en-US/learning/choosing-right-map-projection/). And Mike Bostock has a series of [excellent interactive examples showing some of the complexities of map projection](http://bost.ocks.org/mike/example/#1); I embed one of his D3 examples below:
 
 
 <iframe src="http://bl.ocks.org/dannguyen/raw/36e0f357433dda000dc0/918717fa8db0d0f8d8460026b4a41815b82362de/" width="700" height="400" marginwidth="0" marginheight="0" scrolling="no"></iframe>
@@ -228,7 +226,7 @@ Once you understand map projections, or at least are aware of their existence, a
 
 
 
-```{r, message = FALSE}
+```{r, message = FALSE, warning = FALSE}
 ggplot() +
   geom_polygon(data = us_map, aes(x = long, y = lat, group = group)) +
   coord_map("albers", lat0 = 38, latl = 42) + theme_classic()
@@ -243,25 +241,25 @@ There's obviously [a more graceful, mathematically-proper way of translating the
 
 First, we inspect the column names of `us_map`'s _data_ to see which one corresponds to the _name_ of each polygon, e.g. `Iowa` or `CA`:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 colnames(us_map@data)
 ```
 
 Both __NAME__ and __STUSPS__ (which I'm guessing stands for _U.S. Postal Code_) will work:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 head(select(us_map@data, NAME, STUSPS))
 ```
 
 To filter out the data that corresponds to Alaska, i.e. `STUSPS == "AK"`:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 byebye_alaska <- us_map[us_map$STUSPS != 'AK',]
 ```
 
 To filter out Alaska, Hawaii, and the non-states, e.g. Guam and Washington D.C., and then assign the result to the variable `usc_map`:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 x_states <- c('AK', 'HI', 'AS', 'DC', 'GU', 'MP', 'PR', 'VI')
 usc_map <- us_map[!(us_map$STUSPS %in% x_states), ]
 # alternatively, using subset():
@@ -272,7 +270,7 @@ usc_map <- subset(us_map, !(us_map$STUSPS %in% x_states))
 
 Now let's map the _contiguous_ United States, and, while we're here, let's change the style of the map to be in dark outline with white fill:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 ggplot() +
   geom_polygon(data = usc_map, aes(x = long, y = lat, group = group),
                  fill = "white", color = "#444444", size = 0.1) +
@@ -285,7 +283,7 @@ ggplot() +
 
 Plotting the earthquake data on top of the United States map is as easy as adding two layers together; notice how I plot the map boundaries before the points, or else the map (or rather, its _white fill_) will cover up the earthquake points:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 ggplot(quakes, aes(x = longitude, y = latitude)) +
   geom_polygon(data = usc_map, aes(x = long, y = lat, group = group),
                    fill = "white", color = "#444444", size = 0.1) +
@@ -308,33 +306,33 @@ To reiterate, `usc_map` is a __SpatialPolygonsDataFrame__, and `quakes` is a pla
 
 The first question to ask is: why don't we just filter `quakes` by one of its columns, like we did for `mag` and `type`? The problem is that while the USGS data has a `place` column, it is not U.S.-centric, i.e. there's not an easy way to say, _"Just show me records that take place within the United States"_, because `place` doesn't always mention the country:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 head(quakes$place)
 ```
 
 So instead, we use the latitude/longitude coordinates stored in `usc_map` to filter out earthquakes by _their_ latitude/longitude values. The math to do this from scratch is quite...labor intensive. Luckily, the __sp__ library can do this work for us, we just have to first convert the `quakes` data frame into one of sp's special data frames: a __SpatialPointsDataFrame__.
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 sp_quakes <- SpatialPointsDataFrame(data = quakes,
                           coords = quakes[,c("longitude", "latitude")])
 ```
 
 Then we assign it the same __projection__ as `us_map` (note that `usc_map` also has this same projection). First let's inspect the actual projection of `us_map`:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 us_map@proj4string
 ```
 
 Now assign that value to `sp_quakes` (which, by default, has a `proj4string` attribute of `NA`):
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 sp_quakes@proj4string <- us_map@proj4string
 ```
 
 Let's see what the map plot looks like. Note that in the snippet below, I don't use `sp_quakes` as the data set, but `as.data.frame(sp_quakes)`. This conversion is necessary as ggplot2 doesn't know how to deal with the SpatialPointsDataFrame (and yet it does fine with SpatialPolygonsDataFrames...whatever...):
 
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 ggplot(as.data.frame(sp_quakes), aes(x = longitude, y = latitude)) +
   geom_polygon(data = usc_map, aes(x = long, y = lat, group = group),
                    fill = "white", color = "#444444", size = 0.1) +
@@ -353,7 +351,7 @@ No real change...we've only gone through the process of making a spatial points 
 To see the change that we want &ndash; just earthquakes in the contiguous United States &ndash; we _subset_ the spatial points data frame, i.e. `sp_quakes`, using `usc_map`. This is actually quite easy, and uses similar notation as when subsetting a plain data frame:
 
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 sp_usc_quakes <- sp_quakes[usc_map,]
 ```
 
@@ -361,7 +359,7 @@ sp_usc_quakes <- sp_quakes[usc_map,]
 
 I actually don't know enough about basic R notation and __S4__ objects to know or explain _why_ this works, but it does _just work_:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 usc_quakes <- as.data.frame(sp_usc_quakes)
 
 ggplot(usc_quakes, aes(x = longitude, y = latitude)) +
@@ -379,19 +377,19 @@ ggplot(usc_quakes, aes(x = longitude, y = latitude)) +
 
 What if we want to just show earthquakes in California? We first subset `usc_map`:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 ca_map <- us_map[us_map$STUSPS == 'CA',]
 ```
 
 Then we use `ca_map` to filter `sp_quakes`:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 ca_quakes <- as.data.frame(sp_quakes[ca_map,])
 ```
 
 Mapping California and its quakes:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 ggplot(ca_quakes, aes(x = longitude, y = latitude)) +
   geom_polygon(data = ca_map, aes(x = long, y = lat, group = group),
                    fill = "white", color = "#444444", size = 0.1) +
@@ -413,42 +411,148 @@ As I mentioned previously, the USGS data has a `place` column, but it doesn't fo
 So let's add the `STUSPS` column to `sp_quakes`. For this, we use the __sp__ package's __over()__ function, which will join the rows of `sp_quakes` to the `STUSPS` column of `usc_map`, for quakes in which the geospatial coordinates overlap with the polygons in `usc_map`:
 
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 xdf <- over(sp_quakes, usc_map[, 'STUSPS'])
 ```
 
 Most of the `STUSPS` values in `xdf` will be `<NA>` because, most of the earthquakes do not take place in the United States. Though we see of all the contiguous United States, Oklahoma (i.e. `OK`) has experienced the most earthquakes by far in this month-long dataset:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 xdf %>% group_by(STUSPS) %>%
         summarize(count = n()) %>%
         arrange(desc(count))
 ```
 
-To get a data frame of contiguous U.S.-only quakes, we merge `xdf` with `sp_quakes`, then filter the result by removing all rows in which `STUSPS` is `<NA>`:
+To get a data frame of __contiguous U.S.-only quakes__, we combine `xdf` with `sp_quakes`. We then filter the resulting data frame by removing all rows in which `STUSPS` is `<NA>`:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 ydf <- cbind(sp_quakes, xdf) %>% filter(!is.na(STUSPS))
 usc_quakes <- as.data.frame(ydf)
 ```
 
-How is this different than before, when we derived `usc_quakes` like so:
+So how is this different than before, when we derived `usc_quakes`?
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 old_usc_quakes <- as.data.frame(sp_quakes[usc_map,])
 ```
 
-Try it; the resulting number of rows will be the same. However, the difference in our latest approach is that `usc_quakes` has that additional `STUSPS` column:
+Try it; the resulting number of rows from the methods for `old_usc_quakes` and `usc_quakes` will be the same. However, the difference in our latest approach is that `usc_quakes` has that additional `STUSPS` column:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 head(select(usc_quakes, place, STUSPS))
 ```
 
 Which, among other things, makes it possible to do aggregates of the earthquakes dataframe by `STUSPS`:
 
-```{r, message = F}
+```{r, message = FALSE, warning = FALSE}
 ggplot(usc_quakes, aes(STUSPS)) + geom_histogram(binwidth = 1)
 ```
+
+## Layering and arranging ggplot visuals
+
+In successive examples, I'll be using a few more ggplot tricks and features to add a little more narrative and clarity to the basic data visualizations.
+
+
+### Highlighting and annotating data
+
+
+To highlight the Oklahoma data in <span style="color: #FF6600">orange</span>, I simply add another layer via `geom_histogram()`, except with data filtered for just Oklahoma:
+
+```{r, message = FALSE, warning = FALSE}
+ok_quakes <- usc_quakes[usc_quakes$STUSPS == 'OK',]
+ggplot(usc_quakes, aes(STUSPS)) +
+  geom_histogram(binwidth = 1) +
+  geom_histogram(data = ok_quakes, binwidth = 1, fill = '#FF6600')
+```
+
+We can add labels to the bars [with a stat_bin() call](http://stackoverflow.com/questions/24198896/how-to-get-data-labels-for-a-histogram-in-ggplot2):
+
+
+```{r, message = FALSE, warning = FALSE}
+ggplot(usc_quakes, aes(STUSPS)) +
+  geom_histogram(binwidth = 1) +
+  geom_histogram(data = ok_quakes, binwidth = 1, fill = '#FF6600') + 
+  stat_bin(binwidth=1, geom="text", aes(label = ..count..), vjust = -0.5)
+```
+
+Highlighting Oklahoma in orange on the state map also involves just making another layer call:
+
+
+```{r, message = FALSE, warning = FALSE}
+ok_map <- usc_map[usc_map$STUSPS == 'OK',]
+ggplot(usc_quakes, aes(x = longitude, y = latitude)) +
+  geom_polygon(data = usc_map, aes(x = long, y = lat, group = group),
+                   fill = "white", color = "#444444", size = 0.1) +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
+                   fill = "#FAF2EA", color = "#FF6600", size = 0.4) +
+  geom_point(size = 1,
+               alpha = 0.5,
+               shape = 1,
+               color = 'firebrick')  +
+  coord_map("albers", lat0 = 38, latl = 42) +
+  theme_dan_map()
+```
+
+### Time series
+
+These are not too different from the previous histogram examples, except that the `x`-aesthetic is set to some function of the earthquake data frame's `time` column. We use the __lubridate__ package, specifically __floor_date()__ to _bin_ the records to the nearest hour. Then we use __scale_x_date()__ to scale the x-axis accordingly; the `date_breaks()` and `date_format()` functions come from the __scales__ package.
+
+
+For example, using the `usc_quakes` data frame, here's a time series showing __earthquakes by day__ of the month-long earthquake activity in the contiguous U.S.:
+
+
+```{r, message = FALSE, warning = FALSE}
+ggplot(usc_quakes, aes(x = floor_date(as.Date(time), 'hour'))) + 
+  geom_histogram(binwidth = 1) +
+  scale_x_date(breaks = date_breaks("week"), labels = date_format("%m/%d"))
+```
+
+(The gaps represent days in which no M3.0+ earthquake occured in the lower U.S.)
+
+
+To create a stacked time-series, in which Oklahoma's portion of earthquakes is in orange, it's just a matter of adding another layer as before:
+
+
+```{r, message = FALSE, warning = FALSE}
+ggplot(usc_quakes, aes(x = floor_date(as.Date(time), 'hour'))) + 
+  geom_histogram(binwidth = 1) +
+  geom_histogram(data = filter(usc_quakes, STUSPS == 'OK'), fill = "#FF6600", binwidth = 1) + 
+  scale_x_date(breaks = date_breaks("week"), labels = date_format("%m/%d"))
+```
+
+Or, alternatively, we can set the __fill__ aesthetic to be based on the `STUSPS` column; I use the __guides()__ and __scale_fill_manual()__ functions to order the colors and labels as I want them to be:
+
+```{r, message = FALSE, warning = FALSE}
+ggplot(usc_quakes, aes(x = floor_date(as.Date(time), 'hour'), 
+                       fill = STUSPS != 'OK')) + 
+  geom_histogram(binwidth = 1) +
+  scale_x_date(breaks = date_breaks("week"), labels = date_format("%m/%d")) + 
+  scale_fill_manual(values = c("#FF6600", "gray"), labels = c("OK", "Not OK")) +
+  guides(fill = guide_legend(reverse = TRUE))
+```
+
+
+### Small multiples
+
+
+
+```{r, message = FALSE, warning = FALSE}
+  ggplot(data = mutate(usc_quakes, week = floor_date(as.Date(time), "week")), 
+         aes(x = longitude, y = latitude)) +
+  geom_polygon(data = usc_map, aes(x = long, y = lat, group = group),
+                   fill = "white", color = "#444444", size = 0.1) +
+  geom_point(size = 1,
+               alpha = 0.5,
+               shape = 1,
+               color = 'firebrick')  +
+  coord_map("albers", lat0 = 38, latl = 42) +
+  facet_wrap(~ week, ncol = 2) + 
+  theme_dan_map()
+```
+
+
+
+
 
 At this point, we've covered just about all the data-munging and visualization techniques we need to effectively analyze and visualize the historical earthquake data for the United States.
 
@@ -466,7 +570,7 @@ To render this file:
 library(rmarkdown)
 setwd("~/Dropbox/rprojs/ok-earthquakes-Rnotebook/")
 
-this_file <- 'basic-r-concepts.Rmd'
+this_file <- 'chapter-2-basic-r-concepts.Rmd'
 render(this_file, output_dir = './builds',
   html_document(toc = TRUE, self_contained = F))
 

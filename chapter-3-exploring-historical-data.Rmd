@@ -21,7 +21,8 @@ Questions to ask:
 ```{r, message = FALSE}
 # Load libraries
 library(ggplot2)
-require(grid)
+library(scales)
+library(grid)
 library(dplyr)
 library(lubridate)
 library(rgdal)
@@ -129,7 +130,7 @@ states_quakes$is_OK <- states_quakes$STUSPS == "OK"
 Plot a histogram of all of the earthquakes by state since 1995, and highlight Oklahoma in orange:
 
 ```{r, message = F}
-ggplot(states_quakes, aes(STUSPS)) + 
+ggplot(states_quakes, aes(STUSPS)) +
    geom_histogram(binwidth = 1, width = 0.5) +
    geom_histogram(data = filter(states_quakes, is_OK), binwidth = 1, fill="#FF6600", width = 0.5) +
    theme(axis.text.x = element_text(angle = 90, vjust = 0.6)) +
@@ -147,12 +148,12 @@ qcounts <- states_quakes %>% group_by(STUSPS) %>% summarise(count = n()) %>%
     arrange(desc(count))
 # create a vector
 qcounts$x1 <- factor(qcounts$STUSPS, levels = qcounts$STUSPS)
-ggplot(qcounts, aes(x1, count)) + 
+ggplot(qcounts, aes(x1, count)) +
   scale_y_continuous(expand = c(0, 0)) +
   geom_bar(width = 0.5, stat = "identity") +
   geom_bar(data = filter(qcounts, STUSPS == "OK"), stat = "identity", fill = "#FF6600", width = 0.5) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.6)) + 
-  ggtitle("U.S. Earthquakes Since 1995") 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.6)) +
+  ggtitle("U.S. Earthquakes Since 1995")
 
 ```
 
@@ -177,7 +178,7 @@ ggplot(top_quakes, aes(x = x1, fill = year < 2010)) +
  theme(axis.text.x = element_text(
    face = ifelse(levels(top_quakes$x1) =="OK","bold","italic"),
    color = ifelse(levels(top_quakes$x1) =="OK","#FF6600","#444444"))
-  ) + 
+  ) +
   scale_y_continuous(expand = c(0, 0)) +
   ggtitle("Earthquakes (3.0+ mag) among top 12 U.S. states\nby overall earthquake activity.")
 ```
@@ -192,17 +193,17 @@ Let's focus our look at just Oklahoma:
 ```{r}
 ok_quakes <- filter(states_quakes, is_OK)
 ggplot(data = ok_quakes, aes(year)) +
-  scale_y_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(expand = c(0, 0)) +
   geom_histogram(binwidth = 1, fill = "#DDCCCC") +
-  geom_histogram(data = filter(ok_quakes, year >= 2012 & year < 2015), binwidth = 1,  
+  geom_histogram(data = filter(ok_quakes, year >= 2012 & year < 2015), binwidth = 1,
                  fill="#990000") +
   geom_histogram(data = filter(ok_quakes, year == 2015), binwidth = 1, fill="#BB0000") +
   stat_bin( data = filter(ok_quakes, year >= 2012),
             aes(ymax = (..count..),
             # feels so wrong, but looks so right...
-            label = ifelse(..count.. > 0, ..count.., "")), 
-            binwidth = 1, geom = "text", vjust = 1.0, size = 3.0, 
-            fontface = "bold", color = "white" ) + 
+            label = ifelse(..count.. > 0, ..count.., "")),
+            binwidth = 1, geom = "text", vjust = 1.0, size = 3.0,
+            fontface = "bold", color = "white" ) +
   ggtitle("Oklahoma M3+ earthquakes, from 1995 to August 2015")
 ```
 
@@ -210,10 +211,10 @@ Oklahoma earthquakes by month, since 2008
 
 ```{r}
 tbreaks = as.numeric(seq(as.Date('2008-01-01'), as.Date('2015-08-01'), '1 month'))
-ggplot(data = filter(ok_quakes, year >= 2008), 
+ggplot(data = filter(ok_quakes, year >= 2008),
        aes(x = floor_date(time, 'month')), y = ..count..) +
   # Not sure why stat_bin works but geom_histogram makes bars too skinny...
-  stat_bin(breaks = tbreaks, position = "identity") +    
+  stat_bin(breaks = tbreaks, position = "identity") +
   stat_bin(data = filter(ok_quakes, floor_date(time, 'month') == as.Date('2011-11-01')),
           breaks = tbreaks, position = 'identity', fill = 'red') +
   scale_x_date(breaks = date_breaks("year"), labels = date_format("%Y")) +
@@ -224,10 +225,10 @@ ggplot(data = filter(ok_quakes, year >= 2008),
 Focus on November 2011:
 
 ```{r}
-ggplot(data = filter(ok_quakes, year == 2011, month(time) == 11), 
+ggplot(data = filter(ok_quakes, year == 2011, month(time) == 11),
        aes(x = floor_date(time, 'day'))) +
   geom_histogram(binwidth = 1, color = "white") +
-  scale_x_date(breaks = date_breaks('week'), 
+  scale_x_date(breaks = date_breaks('week'),
                labels = date_format("%d"),
                expand = c(0, 0),
                limits = c(as.Date("2011-11-01"), as.Date("2011-11-30"))) +
@@ -260,9 +261,9 @@ g <- ggplot(top_quakes_ge_2005, aes(year)) +
     geom_rect(data = filter(top_quakes_ge_2005, is_OK), color = '#FF6600', fill = "#fbefe0", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, size = 0.5) +
   geom_histogram(binwidth = 1, fill = "#999999")  +
   geom_histogram(data = filter(top_quakes_ge_2005, year >= 2012), binwidth = 1, fill="#990000") +
-  geom_histogram(data = filter(top_quakes_ge_2005, year == 2015), binwidth = 1, fill="#BB9999") + 
-  scale_x_continuous(breaks = c(2006, 2010, 2014)) +    
-  scale_y_continuous(expand = c(0, 0)) 
+  geom_histogram(data = filter(top_quakes_ge_2005, year == 2015), binwidth = 1, fill="#BB9999") +
+  scale_x_continuous(breaks = c(2006, 2010, 2014)) +
+  scale_y_continuous(expand = c(0, 0))
 g + facet_wrap(~ STUSPS, ncol = 4) + theme(panel.margin = unit(c(1, 0, 0, 0), "lines"))
 ```
 
@@ -280,13 +281,13 @@ pct_quakes <- states_quakes %>%
 
 mygrid <- ggplot(pct_quakes, aes(x = factor(1), y = pct, fill = era)) +
   scale_fill_manual(values = c("#999999", "#666666", "#333333", "red"),  guide = guide_legend(reverse = TRUE)) +
-  geom_bar(width = 1, alpha = 0.6, stat = "identity", size = 0.2 , 
+  geom_bar(width = 1, alpha = 0.6, stat = "identity", size = 0.2 ,
            aes(order = desc(era))) +
   geom_bar(data = filter(pct_quakes, STUSPS == 'OK'),
            alpha = 1.0,
            width = 1, stat = "identity", size = 0.2 , aes(order = desc(era))) +
   coord_polar(theta = "y") +
-  facet_wrap(~ STUSPS, ncol = 4)  
+  facet_wrap(~ STUSPS, ncol = 4)
 
 mygrid + theme_dan_map()
 
