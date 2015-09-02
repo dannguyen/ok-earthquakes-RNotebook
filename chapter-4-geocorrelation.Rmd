@@ -84,8 +84,8 @@ usgs_data <- read.csv(fn, stringsAsFactors = FALSE)
 quakes <- usgs_data %>% filter(mag >= 3.0) %>%
   filter(type == 'earthquake')
 
+quakes$time <- as.Date(quakes$time)
 quakes$year <- year(quakes$time)
-quakes$year_month <- strftime(quakes$time, "%Y-%m")
 quakes <- mutate(quakes, era = ifelse(year <= 2000, "1995-2000",
           ifelse(year <= 2005, "2001-2005",
           ifelse(year <= 2010, "2006-2010", "2011-2015"))))
@@ -289,11 +289,6 @@ gasdata <- read.csv("./data/stlouisfed-oil-prices.csv", stringsAsFactors = F) %>
   mutate(week = floor_date(as.Date(DATE), 'week'), VALUE = as.numeric(VALUE), panel = "GAS") %>%
   group_by(week) %>% summarize(avg_value = mean(VALUE))
 
-  #     annotate("text", x = "2005-01", y = 60, size = rel(1.5), hjust = 0,
-  #              label = c("Earthquakes of at least magnitude 3.0\nin the contiguous United States.\n\nChart by Dan Nguyen @dancow\nStanford Computational Journalism")
-  #           )
-
-
 
 ```
 
@@ -306,7 +301,7 @@ gasdata <- read.csv("./data/stlouisfed-oil-prices.csv", stringsAsFactors = F) %>
 ```{r}
 
 
-okquakes_weekly <- mutate(ok_quakes, week = floor_date(as.Date(time), 'week'), panel = 'Quakes') %>%
+okquakes_weekly <- mutate(ok_quakes, week = floor_date(time, 'week'), panel = 'Quakes') %>%
   filter(year(time) >= 2008) %>%
   group_by(week) %>% 
   summarize(count = n())
@@ -317,7 +312,6 @@ gp <- ggplot() + scale_x_date(breaks = pretty_breaks(),
                  
 quakesg <- gp + geom_bar(data = okquakes_weekly, aes(x = week, y = count), stat = "identity", position = 'identity', color = 'black') +
   scale_y_continuous(expand = c(0, 0)) +
-  theme(axis.text.x = element_blank()) +
   ggtitle("Weekly Counts of M3.0+ Earthquakes in Oklahoma")
 
 gasg <- gp + geom_line(data = gasdata, aes(x = week, y = avg_value), size = 0.5, color = 'black') +   
