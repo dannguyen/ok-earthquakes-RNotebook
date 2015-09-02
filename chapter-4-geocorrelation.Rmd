@@ -28,7 +28,7 @@ library(dplyr)
 library(lubridate)
 library(rgdal)
 library(readxl)
-
+library(scales)
 # load my themes:
 source("./myslimthemes.R")
 theme_set(theme_dan())
@@ -117,39 +117,6 @@ ok_quakes <- filter(states_quakes, STUSPS == 'OK')
 
 Download # http://www.occeweb.com/og/ogdatafiles2.htm
 
-2011:
-
-```{r, message = F}
-fname <- "./data/2011_UIC_Injection_Volumes_Report.xlsx"
-if (!file.exists(fname)){
-  url <- "http://www.occeweb.com/og/2011INJECTIONVOLUMES.xlsx"
-  print(paste("Downloading: ", url))
-  download.file(url, fname)
-}
-tdf <- read_excel(fname)
-# remove NA columns http://stackoverflow.com/questions/15968494/how-to-delete-columns-with-na-in-r
-injections_data.2011 <- tdf[, colSums(is.na(tdf)) != nrow(tdf)] %>%
-    mutate(Volume = as.integer(Volume))
-
-sum(injections_data.2011$Volume)
-```
-
-2012:
-
-```{r, message = F}
-fname <- "./data/2012_UIC_Injection_Volumes_Report.xlsx"
-if (!file.exists(fname)){
-  url <- "http://www.occeweb.com/og/2012Injections20141029.xlsx"
-  print(paste("Downloading: ", url))
-  download.file(url, fname)
-}
-tdf  <- read_excel(fname)
-injections_data.2012 <- tdf[, colSums(is.na(tdf)) != nrow(tdf)] %>%
-    mutate(Volume = as.numeric(Volume)) %>%
-    filter(!is.na(Volume))
-sum(injections_data.2012$Volume)
-```
-
 
 2013:
 
@@ -163,7 +130,7 @@ if (!file.exists(fname)){
 injections_data_2013 <- read_excel(fname)
 injections_2013 <-  injections_data_2013 %>%
     mutate(Volume = as.numeric(Volume),
-           API = as.character(API)) %>% 
+           API = as.character(API)) %>%
     # filter out rows with missing Volume or erroneous X/Y
     filter(!is.na(Volume),
            !is.na(X), X != 0,  X < -90, X > -100,
@@ -211,12 +178,15 @@ TK: Justify the use of Hexbin map, similar to binning by year instead of day
 
 Hexbin map without projection
 
+Earthquakes:
+
 ```{r}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
-  stat_binhex(data = ok_quakes, aes(x = longitude, y = latitude, alpha = ..count..), bins = 20 ) + 
-  coord_equal() + 
+  stat_binhex(data = ok_quakes, aes(x = longitude, y = latitude, alpha = ..count..), bins = 30 ) +
+  scale_fill_gradientn(colours=c("white","red")) +
+  coord_equal() +
   theme_dan_map()
 ```
 
@@ -224,13 +194,29 @@ ggplot() +
 
 TK: http://stackoverflow.com/questions/13167531/ggplot2-multiple-stat-binhex-plots-with-different-color-gradients-in-one-image
 
+overlay of injections and earthquakes
+
+
+```{r}
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
+               fill = "white", color = "black") +
+  stat_summary_hex(data = wells_2013, aes(x = X, y = Y, z = total_volume), bins = 30 ) + scale_fill_gradientn(colours=c("white","green")) +
+  stat_binhex(data = ok_quakes, aes(x = longitude, y = latitude, alpha = ..count..), bins = 30 ) +
+
+  coord_equal() +
+  theme_dan_map()
+```
+
+
+
 
 Hexbin map with injections
 ```{r}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
-  stat_summary_hex(data = wells_2013, aes(x = X, y = Y, z = total_volume), alpha = 0.9, bins = 20 ) + 
+  stat_summary_hex(data = wells_2013, aes(x = X, y = Y, z = total_volume), alpha = 0.9, bins = 20 ) +
   geom_point(data = ok_quakes, aes(x = longitude, y = latitude),
            alpha = 0.1, size = 0.2, shape = 1, color = 'red')
 
@@ -271,6 +257,117 @@ ggplot() +
             alpha = 0.1, size = 0.2, shape = 1, color = 'red')
 ```
 
+
+
+## Google map
+
+
+```{r}
+library(ggmap)
+#googmap <- get_googlemap(center = "Oklahoma", maptype = "satellite", zoom = 7, size = c(800,500), sensor = FALSE)
+
+ggmap(get_googlemap(urlonly = FALSE), extent = "panel")
+
+```
+
+
+
+# Gas prices
+
+https://research.stlouisfed.org/fred2/series/DCOILWTICO/downloaddata
+
+
+```{r}
+fname <- './data/stlouisfed-oil-prices.csv'
+if (!file.exists(fname)){
+  curlstr <- paste("curl -s --data 'form%5Bnative_frequency%5D=Daily&form%5Bunits%5D=lin&form%5Bfrequency%5D=Daily&form%5Baggregation%5D=Average&form%5Bobs_start_date%5D=1986-01-02&form%5Bobs_end_date%5D=2015-08-24&form%5Bfile_format%5D=csv&form%5Bdownload_data_2%5D='", '-o', fname)
+  print(paste("Downloading: ", fname))
+  system(curlstr)
+}
+gasdata <- read.csv("./data/stlouisfed-oil-prices.csv", stringsAsFactors = F) %>%
+  filter(year(DATE) >= 2008, VALUE != '.')  %>%
+  mutate(week = floor_date(as.Date(DATE), 'week'), VALUE = as.numeric(VALUE), panel = "GAS") %>%
+  group_by(week) %>% summarize(avg_value = mean(VALUE))
+
+  #     annotate("text", x = "2005-01", y = 60, size = rel(1.5), hjust = 0,
+  #              label = c("Earthquakes of at least magnitude 3.0\nin the contiguous United States.\n\nChart by Dan Nguyen @dancow\nStanford Computational Journalism")
+  #           )
+
+
+
+```
+
+
+
+
+
+
+
+```{r}
+annotations <- list(
+  list(date = "2011-11-05", label = "5.6M", letter = 'A'),
+  list(date = "2014-02-18", label = "Result of natural stresses", letter = 'B'),
+  list(date = "2015-04-21", label = "Reversal in opinion", letter = 'C')
+)
+
+
+datelines <- lapply(annotations, function(a){
+  wk <- as.numeric(floor_date(as.Date(a$date), 'week'))
+  geom_vline(xintercept = wk, color = "red", 
+             linetype = 'dashed')
+})
+
+
+
+okquakes_weekly <- mutate(ok_quakes, week = floor_date(as.Date(time), 'week'), panel = 'Quakes') %>%
+  filter(year(time) >= 2008) %>%
+  group_by(week) %>% 
+  summarize(count = n())
+  
+
+gp <- ggplot() + scale_x_date(breaks = pretty_breaks(),
+                              limits = c(as.Date('2008-01-01'), as.Date('2015-08-31')))
+                 
+
+
+
+quakesg <- gp + geom_bar(data = okquakes_weekly, aes(x = week, y = count), stat = "identity", position = 'identity', color = 'black') +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme(axis.text.x = element_blank()) +
+  ggtitle("M3.0+ Earthquakes in Oklahoma by Week") + 
+  datelines + datelabels
+
+gasg <- gp + geom_line(data = gasdata, aes(x = week, y = avg_value), size = 0.5, color = 'black') +   
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 150)) +
+  ggtitle("Weekly Average Oil Prices, Dollars per Barrel") + 
+  datelines + datelabels  
+
+
+grid.arrange(quakesg, gasg)
+
+
+```
+
+
+```{r}
+# http://stackoverflow.com/questions/10197738/add-a-footnote-citation-outside-of-plot-area-in-r
+
+datelabels <- lapply(annotations, function(a){
+  dt <- as.Date(a$date)
+  annotate("text", x = dt, y = Inf, size = rel(4.0),  label = a$letter, vjust = 1.0, fontface = 'bold', color = "red", hjust = 1.5)
+})
+
+txt = paste(lapply(annotations, function(a){ paste(a$letter, a$label, sep = '. ') }), collapse = '\n')
+
+p <- arrangeGrob(gasg, quakesg,
+                 bottom = textGrob(label = txt, x = 0.1, 
+                                         hjust = -0.0, vjust=0.1,
+                                         gp = gpar(fontface = "italic", fontsize = 10))
+                 )
+
+plot.new()
+grid.draw(p)
+```
 
 
 
