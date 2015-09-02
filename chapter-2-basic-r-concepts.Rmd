@@ -79,6 +79,22 @@ if (!file.exists(fname)){
 }
 ```
 
+Alternatively, to download a specific interval of data, such as just the earthquakes for __August 2015__, use the USGS Archives endpoint:
+
+
+```{r, message = FALSE, warning = FALSE, eval = FALSE}
+base_url <- 'http://earthquake.usgs.gov/fdsnws/event/1/query.csv?'
+starttimeparam <- 'starttime=2015-08-01 00:00:00'
+endtime_param <- 'endtime=2015-08-31 23:59:59'
+orderby_param <- 'orderby=time-asc'
+url <- paste(base_url, starttimeparam, endtime_param, orderby_param, sep = "&")
+print(paste("Downloading: ", url))
+fname = 'data/2015-08.csv
+download.file(url, fname)
+```
+
+
+
 The standard __read.csv()__ function can be used to convert the CSV file into a data frame, which I store into a variable named `usgs_data`:
 
 ```{r, message = FALSE, warning = FALSE}
@@ -471,7 +487,7 @@ We can add labels to the bars [with a stat_bin() call](http://stackoverflow.com/
 ```{r, message = FALSE, warning = FALSE}
 ggplot(usc_quakes, aes(STUSPS)) +
   geom_histogram(binwidth = 1) +
-  geom_histogram(data = ok_quakes, binwidth = 1, fill = '#FF6600') + 
+  geom_histogram(data = ok_quakes, binwidth = 1, fill = '#FF6600') +
   stat_bin(binwidth=1, geom="text", aes(label = ..count..), vjust = -0.5)
 ```
 
@@ -502,7 +518,7 @@ For example, using the `usc_quakes` data frame, here's a time series showing __e
 
 
 ```{r, message = FALSE, warning = FALSE}
-ggplot(usc_quakes, aes(x = floor_date(as.Date(time), 'hour'))) + 
+ggplot(usc_quakes, aes(x = floor_date(as.Date(time), 'hour'))) +
   geom_histogram(binwidth = 1) +
   scale_x_date(breaks = date_breaks("week"), labels = date_format("%m/%d"))
 ```
@@ -514,19 +530,19 @@ To create a stacked time-series, in which Oklahoma's portion of earthquakes is i
 
 
 ```{r, message = FALSE, warning = FALSE}
-ggplot(usc_quakes, aes(x = floor_date(as.Date(time), 'hour'))) + 
+ggplot(usc_quakes, aes(x = floor_date(as.Date(time), 'hour'))) +
   geom_histogram(binwidth = 1) +
-  geom_histogram(data = filter(usc_quakes, STUSPS == 'OK'), fill = "#FF6600", binwidth = 1) + 
+  geom_histogram(data = filter(usc_quakes, STUSPS == 'OK'), fill = "#FF6600", binwidth = 1) +
   scale_x_date(breaks = date_breaks("week"), labels = date_format("%m/%d"))
 ```
 
 Or, alternatively, we can set the __fill__ aesthetic to be based on the `STUSPS` column; I use the __guides()__ and __scale_fill_manual()__ functions to order the colors and labels as I want them to be:
 
 ```{r, message = FALSE, warning = FALSE}
-ggplot(usc_quakes, aes(x = floor_date(as.Date(time), 'hour'), 
-                       fill = STUSPS != 'OK')) + 
+ggplot(usc_quakes, aes(x = floor_date(as.Date(time), 'hour'),
+                       fill = STUSPS != 'OK')) +
   geom_histogram(binwidth = 1) +
-  scale_x_date(breaks = date_breaks("week"), labels = date_format("%m/%d")) + 
+  scale_x_date(breaks = date_breaks("week"), labels = date_format("%m/%d")) +
   scale_fill_manual(values = c("#FF6600", "gray"), labels = c("OK", "Not OK")) +
   guides(fill = guide_legend(reverse = TRUE))
 ```
@@ -534,10 +550,10 @@ ggplot(usc_quakes, aes(x = floor_date(as.Date(time), 'hour'),
 
 ### Small multiples
 
-
+ggplot2's __facet_wrap()__ function provides a convenient way to generate a grid of visualizations, one for each value of a variable, i.e. [Tufte's "small multiples", or, lattice/trellis charts](https://en.wikipedia.org/wiki/Small_multiple):
 
 ```{r, message = FALSE, warning = FALSE}
-  ggplot(data = mutate(usc_quakes, week = floor_date(as.Date(time), "week")), 
+  ggplot(data = mutate(usc_quakes, week = floor_date(as.Date(time), "week")),
          aes(x = longitude, y = latitude)) +
   geom_polygon(data = usc_map, aes(x = long, y = lat, group = group),
                    fill = "white", color = "#444444", size = 0.1) +
@@ -546,7 +562,7 @@ ggplot(usc_quakes, aes(x = floor_date(as.Date(time), 'hour'),
                shape = 1,
                color = 'firebrick')  +
   coord_map("albers", lat0 = 38, latl = 42) +
-  facet_wrap(~ week, ncol = 2) + 
+  facet_wrap(~ week, ncol = 2) +
   theme_dan_map()
 ```
 
