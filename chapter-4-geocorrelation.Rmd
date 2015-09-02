@@ -304,19 +304,6 @@ gasdata <- read.csv("./data/stlouisfed-oil-prices.csv", stringsAsFactors = F) %>
 
 
 ```{r}
-annotations <- list(
-  list(date = "2011-11-05", label = "5.6M", letter = 'A'),
-  list(date = "2014-02-18", label = "Result of natural stresses", letter = 'B'),
-  list(date = "2015-04-21", label = "Reversal in opinion", letter = 'C')
-)
-
-
-datelines <- lapply(annotations, function(a){
-  wk <- as.numeric(floor_date(as.Date(a$date), 'week'))
-  geom_vline(xintercept = wk, color = "red", 
-             linetype = 'dashed')
-})
-
 
 
 okquakes_weekly <- mutate(ok_quakes, week = floor_date(as.Date(time), 'week'), panel = 'Quakes') %>%
@@ -328,43 +315,54 @@ okquakes_weekly <- mutate(ok_quakes, week = floor_date(as.Date(time), 'week'), p
 gp <- ggplot() + scale_x_date(breaks = pretty_breaks(),
                               limits = c(as.Date('2008-01-01'), as.Date('2015-08-31')))
                  
-
-
-
 quakesg <- gp + geom_bar(data = okquakes_weekly, aes(x = week, y = count), stat = "identity", position = 'identity', color = 'black') +
   scale_y_continuous(expand = c(0, 0)) +
   theme(axis.text.x = element_blank()) +
-  ggtitle("M3.0+ Earthquakes in Oklahoma by Week") + 
-  datelines + datelabels
+  ggtitle("Weekly Counts of M3.0+ Earthquakes in Oklahoma")
 
 gasg <- gp + geom_line(data = gasdata, aes(x = week, y = avg_value), size = 0.5, color = 'black') +   
   scale_y_continuous(expand = c(0, 0), limits = c(0, 150)) +
-  ggtitle("Weekly Average Oil Prices, Dollars per Barrel") + 
-  datelines + datelabels  
-
-
-grid.arrange(quakesg, gasg)
-
-
+  ggtitle("Weekly Average Oil Prices, Dollars per Barrel") 
 ```
 
 
 ```{r}
 # http://stackoverflow.com/questions/10197738/add-a-footnote-citation-outside-of-plot-area-in-r
 
+annotations <- list(
+  list(date = "2011-11-05", label = "5.6M earthquake hits Oklahoma", letter = 'A'),
+  list(date = "2014-02-18", label = 'OGS states that "Overall, the majority, but not all, of the recent earthquakes appear\nto be the result of natural stresses."', letter = 'B'),
+  list(date = "2015-04-21", label = 'OGS reverses its opinion: "The rates and trends in seismicity are very unlikely\nto represent a naturally occurring process"', letter = 'C')
+)
+
+
+datelines <- lapply(annotations, function(a){
+  wk <- as.numeric(floor_date(as.Date(a$date), 'week'))
+  geom_vline(xintercept = wk, color = "red", 
+             linetype = 'dashed')
+})
+
 datelabels <- lapply(annotations, function(a){
   dt <- as.Date(a$date)
   annotate("text", x = dt, y = Inf, size = rel(4.0),  label = a$letter, vjust = 1.0, fontface = 'bold', color = "red", hjust = 1.5)
 })
 
-txt = paste(lapply(annotations, function(a){ paste(a$letter, a$label, sep = '. ') }), collapse = '\n')
+ttheme <- theme(plot.title = element_text(size = 12))
 
-p <- arrangeGrob(gasg, quakesg,
-                 bottom = textGrob(label = txt, x = 0.1, 
-                                         hjust = -0.0, vjust=0.1,
-                                         gp = gpar(fontface = "italic", fontsize = 10))
-                 )
+footnotes = paste(lapply(annotations, function(a){ 
+              paste(a$letter, 
+              paste(strftime(a$date, '%b %d, %Y'), a$label, sep = ' - '), 
+              sep = '. ')
+    }), 
+  collapse = '\n')
 
+p <- arrangeGrob(quakesg + datelines + datelabels + ttheme,
+                 gasg + datelines + datelabels + ttheme,                  
+                 bottom = textGrob(label = footnotes, x = unit(1, 'cm'), 
+                                         hjust = 0.0, vjust = 0.3,
+                                         gp = gpar(fontsize = rel(12)))
+                 ) 
+     
 plot.new()
 grid.draw(p)
 ```
