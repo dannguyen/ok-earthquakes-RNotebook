@@ -48,7 +48,7 @@ if (!file.exists(fname)){
   download.file(url, fname)
 }
 unzip(fname, exdir = "./data/shp")
-
+#
 # Read the map data
 us_map <- readOGR("./data/shp/cb_2014_us_state_20m.shp", "cb_2014_us_state_20m")
 states_map <- us_map[!us_map$STUSPS %in%
@@ -160,39 +160,25 @@ if (!file.exists(fname)){
   print(paste("Downloading: ", url))
   download.file(url, fname)
 }
-injections_data.2013 <- read_excel(fname)
-tdf  <- read_excel(fname)
-injections_data.2013 <- tdf[, colSums(is.na(tdf)) != nrow(tdf)] %>%
-    mutate(Volume = as.numeric(Volume)) %>%
-    filter(!is.na(Volume))
-sum(injections_data.2013$Volume)
-
+injections_data_2013 <- read_excel(fname)
+injections_2013 <-  injections_data_2013 %>%
+    mutate(Volume = as.numeric(Volume),
+           API = as.character(API)) %>% 
+    # filter out rows with missing Volume or erroneous X/Y
+    filter(!is.na(Volume),
+           !is.na(X), X != 0,  X < -90, X > -100,
+           !is.na(Y), Y != 0, Y > 33.5, Y < 40)
 ```
 
 
+Aggregate the wells by their unique identifier and create a `total_volume` column:
 
 
 ```{r}
-injections.2013 <- mutate(injections_data.2013, API = as.character(API)) %>%
-    filter(!is.na(X), X != 0,  X < -90, X > -100,
-           !is.na(Y), Y != 0, Y > 33.5, Y < 40)
-
-sum(injections.2013$Volume)
-tk.2013 <- as.data.frame(group_by(injections.2013, API, X, Y, WellStatus) %>%
+wells_2013 <-  as.data.frame(group_by(injections_2013, API) %>%
     summarise(counts = n(), total_volume = sum(Volume)) %>%
     arrange(desc(counts)))
-
-#filter(uic_injects, API == '3.5103243e+13')
-
-# TK count this
-#length(unique(uic_injects$API))
-#length(unique(uic_injects$WellNumber))
-
-
-
 ```
-
-
 
 
 
@@ -204,15 +190,14 @@ Map it:
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
-  geom_point(data = filter(injections, total_volume < 1250000),
+  geom_point(data = filter(wells_2013, total_volume < 1250000),
              aes(x = X, y = Y),
              alpha = 0.1 , color = 'yellow') +
-  geom_point(data = filter(injections, total_volume > 1250000),
+  geom_point(data = filter(wells_2013, total_volume > 1250000),
              aes(x = X, y = Y),
-             alpha = 0.0 , color = 'green') +
-
+             alpha = 0.1 , color = 'purple') +
   geom_point(data = ok_quakes, aes(x = longitude, y = latitude),
-            alpha = 0.1, size = 0.2, shape = 1, color = 'red') +
+            alpha = 0.1, size = 0.3, shape = 1, color = 'red') +
   coord_map("albers", lat0 = 38, latl = 42) + theme_dan_map()
 ```
 
@@ -221,15 +206,32 @@ ggplot() +
 ## Maps
 
 
-Justify the use of Hexbin map
+TK: Justify the use of Hexbin map, similar to binning by year instead of day
 
 
+Hexbin map without projection
 
 ```{r}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
-  stat_summary_hex(data = injections, aes(x = X, y = Y, z = total_volume), alpha = 0.9, bins = 20 ) + geom_point(data = ok_quakes, aes(x = longitude, y = latitude),
+  stat_binhex(data = ok_quakes, aes(x = longitude, y = latitude, alpha = ..count..), bins = 20 ) + 
+  coord_equal() + 
+  theme_dan_map()
+```
+
+
+
+TK: http://stackoverflow.com/questions/13167531/ggplot2-multiple-stat-binhex-plots-with-different-color-gradients-in-one-image
+
+
+Hexbin map with injections
+```{r}
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
+               fill = "white", color = "black") +
+  stat_summary_hex(data = wells_2013, aes(x = X, y = Y, z = total_volume), alpha = 0.9, bins = 20 ) + 
+  geom_point(data = ok_quakes, aes(x = longitude, y = latitude),
            alpha = 0.1, size = 0.2, shape = 1, color = 'red')
 
 ```

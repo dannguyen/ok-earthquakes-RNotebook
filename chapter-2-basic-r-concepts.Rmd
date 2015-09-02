@@ -79,7 +79,7 @@ if (!file.exists(fname)){
 }
 ```
 
-Alternatively, to download a specific interval of data, such as just the earthquakes for __August 2015__, use the USGS Archives endpoint:
+Alternatively, to download a specific interval of data, such as just the earthquakes for __August 2015__, use [the USGS Archives endpoint](http://earthquake.usgs.gov/earthquakes/search/):
 
 
 ```{r, message = FALSE, warning = FALSE, eval = FALSE}
