@@ -15,7 +15,8 @@ theme_dan <- function(){
     panel.grid.major = element_line(size = 0.3, colour = "#666666",
       linetype = "dotted"),
     panel.grid.major.x = element_blank(),
-    panel.grid.minor.x = element_blank()
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_text(size = 15, vjust=2)
   )
 }
 

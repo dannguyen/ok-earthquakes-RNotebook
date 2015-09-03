@@ -85,13 +85,6 @@ nrow(usgs_data)
 ```
 
 
-```{r, message = F}
-# Remove all non-earthquakes and events with magnitude less than 3.0:
-quakes <- usgs_data %>% filter(mag >= 3.0) %>%
-  filter(type == 'earthquake')
-nrow(quakes)
-```
-
 
 Add some convenience columns; use lubridate to add a `year` and `era` column:
 
@@ -104,6 +97,14 @@ quakes <- mutate(quakes, time = as.Date(time), year = year(time)) %>%
           ifelse(year <= 2010, "2006-2010", "2011-2015"))))
 ```
 
+
+Remove all non-earthquakes and events with magnitude less than 3.0:
+
+```{r, message = F}
+quakes <- usgs_data %>% filter(mag >= 3.0) %>%
+  filter(type == 'earthquake')
+nrow(quakes)
+```
 
 
 ```{r, message = F}
@@ -138,7 +139,7 @@ cg_quakes <- states_quakes[!states_quakes$STUSPS  %in% c('AK', 'HI'), ]
 ```
 
 ```{r}
-ggplot() + 
+ggplot() +
   geom_polygon(data = cg_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
   geom_point(data = cg_quakes, aes(x = longitude, y = latitude), shape = 1, color = "red", alpha = 0.2) +
   coord_map("albers", lat0 = 38, latl = 42) +
@@ -152,11 +153,11 @@ By era:
 Legend hack: http://stackoverflow.com/questions/5290003/how-to-set-legend-alpha-with-ggplot2
 
 ```{r}
-ggplot() + 
+ggplot() +
   geom_polygon(data = cg_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
   geom_point(data = cg_quakes, aes(x = longitude, y = latitude, color = era), shape = 4,  alpha = 0.2) +
   coord_map("albers", lat0 = 38, latl = 42) +
-  guides(colour = guide_legend(override.aes = list(alpha = 1))) + 
+  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
   theme_dan_map()
 
 ```
@@ -164,12 +165,12 @@ ggplot() +
 Small multiples:
 
 ```{r}
-ggplot() + 
+ggplot() +
   geom_polygon(data = cg_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
   geom_point(data = cg_quakes, aes(x = longitude, y = latitude), shape = 4,  alpha = 0.2, color = "red") +
   coord_map("albers", lat0 = 38, latl = 42) +
-  guides(colour = guide_legend(override.aes = list(alpha = 1))) + 
-  theme_dan_map() + 
+  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
+  theme_dan_map() +
   facet_wrap(~ era)
 ```
 
@@ -182,16 +183,17 @@ ok_quakes <- filter(states_quakes, is_OK)
 ok_map <- states_map[states_map$STUSPS == 'OK',]
 ```
 
-```{r, small_multiples_oklahoma_map_quakes"", fig.cap = "Small Multiples Oklahoma"}
-ggplot() + 
+```{r, small_multiples_oklahoma_map_quakes, fig.cap = "Small Multiples Oklahoma"}
+ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
   geom_point(data = ok_quakes, aes(x = longitude, y = latitude), shape = 4,  alpha = 0.5, color = "red") +
   coord_map("albers", lat0 = 38, latl = 42) +
-  guides(colour = guide_legend(override.aes = list(alpha = 1))) + 
-  theme_dan_map() + 
+  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
+  theme_dan_map() +
   facet_wrap(~ era) +
   ggtitle("M3.0+ Earthquakes in Oklahoma")
 ```
+
 
 
 
@@ -216,7 +218,7 @@ U.S. vs Non US:
 ```{r}
 ggplot(data = world_quakes, aes(x = year, fill = is.na(STUSPS))) +
   geom_histogram(binwidth = 1) +
-  scale_fill_manual(values = c("red", "gray"), labels = c("Within U.S.", "Outside U.S.")) + 
+  scale_fill_manual(values = c("red", "gray"), labels = c("Within U.S.", "Outside U.S.")) +
   guides(fill = guide_legend(reverse = TRUE))
 ```
 
@@ -331,11 +333,11 @@ ggplot(data = filter(ok_quakes, year >= 2008),
        aes(x = floor_date(time, 'month')), y = ..count..) +
   stat_bin(breaks = mbreaks, position = "identity") +
   stat_bin(data = filter(ok_quakes, floor_date(time, 'month') == as.Date('2011-11-01')),
-          breaks = tbreaks, position = 'identity', fill = 'red') +
+          breaks = mbreaks, position = 'identity', fill = 'red') +
   scale_x_date(breaks = date_breaks("year"), labels = date_format("%Y")) +
   scale_y_continuous(expand = c(0, 0)) +
   annotate(geom = "text", x = as.Date("2011-11-01"), y = 50, size = rel(3.5), vjust = 0.0, color = "#DD6600",
-           label = "November 2011\nRecord M5.6 earthquake hits Oklahoma") + 
+           label = "November 2011\nRecord M5.6 earthquake hits Oklahoma") +
   ggtitle("Oklahoma M3+ earthquakes since 2008, by month")
 ```
 
@@ -397,7 +399,7 @@ mygrid <- ggplot(pct_quakes, aes(x = factor(1), y = pct, fill = era)) +
   facet_wrap(~ STUSPS, ncol = 4) +
   ggtitle("Earthquakes by time period for U.S. states with most overall earthquake activity")
 
-mygrid + theme_dan_map() 
+mygrid + theme_dan_map()
 
 ```
 
@@ -421,14 +423,14 @@ Stacked charts
 # continuous scale from month-date and applying it to stat_bin for a more
 # attractive graph
 mbreaks <- as.numeric(seq(as.Date('2008-01-01'), as.Date('2015-08-01'), '1 month'))
-states_quakes_ge_2008 <- filter(states_quakes, year >= 2008) 
+states_quakes_ge_2008 <- filter(states_quakes, year >= 2008)
 
 ggplot(data = states_quakes_ge_2008, aes(x = ceiling_date(time, 'month'), y = ..count..)) +
   stat_bin(aes(fill = !is_OK), breaks = mbreaks, position = "stack") +
   scale_x_date(breaks = date_breaks("year"), labels = date_format("%Y")) +
   scale_y_continuous(expand = c(0, 0)) +
-  scale_fill_manual(values = c("#FF6600", "gray"), labels = c("Oklahoma", "All other states")) + 
-  guides(fill = guide_legend(reverse = TRUE)) + 
+  scale_fill_manual(values = c("#FF6600", "gray"), labels = c("Oklahoma", "All other states")) +
+  guides(fill = guide_legend(reverse = TRUE)) +
   ggtitle("Monthly M3.0+ Earthquakes, Oklahoma vs. Other U.S. Combined")
 ```
 
@@ -441,7 +443,7 @@ Stacked chart by year
 ```{r, message = F}
 ggplot(states_quakes, aes(x = factor(year))) +
   geom_histogram(aes(fill = !is_OK), binwidth = 1) +
-  scale_fill_manual(values = c("#FF6600", "grey"), 
+  scale_fill_manual(values = c("#FF6600", "grey"),
                     labels = c('Oklahoma', 'All other U.S.')) +
   scale_x_discrete(breaks = pretty_breaks()) +
   scale_y_continuous(expand = c(0, 0)) +
@@ -487,6 +489,7 @@ render(this_file, output_dir = './builds',
 render(this_file, output_dir = './builds',
   md_document(variant = "markdown_github",
               preserve_yaml = TRUE))
+
 -->
 
 
