@@ -767,7 +767,8 @@ setwd("~/Dropbox/rprojs/ok-earthquakes-Rnotebook/")
 this_file <- 'chapter-2-basic-r-concepts.Rmd'
 
 opts_chunk$set(fig.width = 9, fig.height = 5, dpi = 200)
+render(this_file, output_dir = './build_md', md_document(variant = "markdown_github", preserve_yaml = FALSE))
+
 render(this_file, output_dir = './builds', html_document(toc = TRUE, self_contained = F))
 
-render(this_file, output_dir = './md', md_document(variant = "markdown_github", preserve_yaml = FALSE))
 -->

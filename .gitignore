@@ -12,7 +12,9 @@ feed.xml
 .Rhistory
 *.html
 builds/
+build_md/
 # ignore massive files
 data/usgs-quakes-dump.csv
 data/shp/US_OG*.*
 !data/shp/US_OG_022014notes.txt.txt
+final_md/
