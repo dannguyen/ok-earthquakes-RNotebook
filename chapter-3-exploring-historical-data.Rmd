@@ -1,11 +1,8 @@
 ---
 title: "Chapter 3: Exploring the Historical Data"
-author: "Dan Nguyen"
-date: "August 17, 2015"
-output:
-  md_document:
-    variant: markdown_github
 ---
+
+# Chapter 3: Exploring the Historical Data
 
 Questions to ask:
 
@@ -91,7 +88,7 @@ Add some convenience columns; use lubridate to add a `year` and `era` column:
 
 ```{r, message = F}
 
-quakes <- mutate(quakes, time = as.Date(time), year = year(time)) %>%
+usgs_data <- mutate(usgs_data, time = as.Date(time), year = year(time)) %>%
           mutate(era = ifelse(year <= 2000, "1995-2000",
           ifelse(year <= 2005, "2001-2005",
           ifelse(year <= 2010, "2006-2010", "2011-2015"))))
@@ -143,7 +140,8 @@ ggplot() +
   geom_polygon(data = cg_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
   geom_point(data = cg_quakes, aes(x = longitude, y = latitude), shape = 1, color = "red", alpha = 0.2) +
   coord_map("albers", lat0 = 38, latl = 42) +
-  theme_dan_map()
+  theme_dan_map() +
+  ggtitle("M3.0+ earthquakes in U.S. since 1995")
 
 ```
 
@@ -158,7 +156,8 @@ ggplot() +
   geom_point(data = cg_quakes, aes(x = longitude, y = latitude, color = era), shape = 4,  alpha = 0.2) +
   coord_map("albers", lat0 = 38, latl = 42) +
   guides(colour = guide_legend(override.aes = list(alpha = 1))) +
-  theme_dan_map()
+  theme_dan_map() +
+  ggtitle("M3.0+ earthquakes in U.S. since 1995")
 
 ```
 
@@ -171,7 +170,8 @@ ggplot() +
   coord_map("albers", lat0 = 38, latl = 42) +
   guides(colour = guide_legend(override.aes = list(alpha = 1))) +
   theme_dan_map() +
-  facet_wrap(~ era)
+  facet_wrap(~ era) +
+  ggtitle("M3.0+ earthquakes in U.S. by time period")
 ```
 
 Small multiples focused on Oklahoma:
@@ -191,7 +191,7 @@ ggplot() +
   guides(colour = guide_legend(override.aes = list(alpha = 1))) +
   theme_dan_map() +
   facet_wrap(~ era) +
-  ggtitle("M3.0+ Earthquakes in Oklahoma")
+  ggtitle("M3.0+ earthquakes in Oklahoma by time period")
 ```
 
 
@@ -243,7 +243,7 @@ ggplot(states_quakes, aes(STUSPS)) +
    geom_histogram(data = filter(states_quakes, is_OK), binwidth = 1, fill="#FF6600", width = 0.5) +
    scale_y_continuous(expand = c(0, 0)) +
    theme(axis.text.x = element_text(angle = 90, vjust = 0.6)) +
-   ggtitle("U.S. Earthquakes Since 1995")
+   ggtitle("U.S. M3.0+ earthquakes since 1995, grouped by state")
 ```
 
 Reduce the noise by filtering out states. Only a few states have a significant number of earthquakes.
@@ -262,7 +262,7 @@ ggplot(qcounts, aes(x1, count)) +
   geom_bar(width = 0.5, stat = "identity") +
   geom_bar(data = filter(qcounts, STUSPS == "OK"), stat = "identity", fill = "#FF6600", width = 0.5) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.6)) +
-  ggtitle("U.S. Earthquakes Since 1995")
+  ggtitle("U.S. M3.0+ earthquakes since 1995\ngrouped and sorted by states with most earthquake activity")
 
 ```
 
@@ -360,7 +360,7 @@ ggplot(data = filter(ok_quakes, year == 2011, month(time) == 11),
 
 --------------
 
-## Something Small Multiples
+## TKTK Something Small Multiples
 
 
 ```{r, earthquake_activity_top_states_by_year, message = F}
@@ -373,12 +373,12 @@ g <- ggplot(top_quakes_ge_2005, aes(factor(year))) +
   scale_x_discrete(breaks = c(2006, 2010, 2014)) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, 600))
 g + facet_wrap(~ STUSPS, ncol = 4) + theme(panel.margin = unit(c(1, 1, 1, 1), "lines")) +
-  ggtitle("Annual number of M3.0+ earthquakes for states with most earthquake activity")
+  ggtitle("Annual number of M3.0+ earthquakes for\nU.S. states with most earthquake activity")
 ```
 
 
 
-## TKTK pie
+## TKTK pie breakdown
 
 ```{r, earthquake_activity_pie_era,  message = F}
 
@@ -397,7 +397,7 @@ mygrid <- ggplot(pct_quakes, aes(x = factor(1), y = pct, fill = era)) +
            width = 1, stat = "identity", size = 0.2 , aes(order = desc(era))) +
   coord_polar(theta = "y") +
   facet_wrap(~ STUSPS, ncol = 4) +
-  ggtitle("Earthquakes by time period for U.S. states with most overall earthquake activity")
+  ggtitle("Earthquakes by time period for U.S. states\nwith most overall earthquake activity")
 
 mygrid + theme_dan_map()
 
@@ -479,16 +479,16 @@ ggplot(states_quakes, aes(factor(year))) +
 
 <!--
 To render this file:
+
 library(rmarkdown)
+library(knitr)
 setwd("~/Dropbox/rprojs/ok-earthquakes-Rnotebook/")
-
 this_file <- 'chapter-3-exploring-historical-data.Rmd'
-render(this_file, output_dir = './builds',
-  html_document(toc = TRUE, self_contained = F, fig.path = 'figurines/'))
 
-render(this_file, output_dir = './builds',
-  md_document(variant = "markdown_github",
-              preserve_yaml = TRUE))
+opts_chunk$set(fig.width = 9, fig.height = 5, dpi = 200)
+render(this_file, output_dir = './build_md', md_document(variant = "markdown_github", preserve_yaml = FALSE))
+
+render(this_file, output_dir = './builds', html_document(toc = TRUE, self_contained = F))
 
 -->
 

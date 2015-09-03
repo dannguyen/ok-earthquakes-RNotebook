@@ -1,8 +1,36 @@
-#' @import ggplot2
-#' @import grid
+
+is.extrafont.installed <- function(){
+  if(is.element("extrafont", installed.packages()[,1])){
+    library(extrafont)
+    # probably need something here to run font_import()
+    return(T)
+  }else{
+    warning("Library extrafont installed; using system sans/serif libraries as fallback fonts.
+    To enable full font support, run:
+      install.packages('extrafont')
+      font_import()")
+    return(F)
+  }
+}
+
+
+dan_base_font <- function(){
+  if(is.extrafont.installed()){
+    require(extrafont)
+    bfont <- choose_font(c("Gill Sans MT", "Gill Sans", "GillSans", "Verdana", "serif"), quiet = FALSE)
+  }else{
+    bfont <- "Helvetica"
+  }
+  return(bfont)
+}
+
+
+
 
 theme_dan <- function(){
-  theme_minimal() +
+  require(ggplot2)
+  require(grid)
+  theme_minimal(base_family = dan_base_font()) +
   theme(
     axis.text = element_text(colour = "#555555"),
     axis.line = element_line(size = 0.1, linetype = "solid", color = "#444444"),
@@ -16,7 +44,7 @@ theme_dan <- function(){
       linetype = "dotted"),
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
-    plot.title = element_text(size = 15, vjust=2)
+    plot.title = element_text(size = 15, vjust = 2, hjust = 0.5)
   )
 }
 

@@ -13,7 +13,7 @@ output:
 
 ---
 
-# Part 2: Basic R Concepts
+# Chapter 2: Basic R Concepts
 
 
 ## Loading the libraries and themes
@@ -25,6 +25,7 @@ library(grid)
 library(dplyr)
 library(lubridate)
 library(rgdal)
+library(hexbin) # install.packages('hexbin')
 ```
 
 - [ggplot2](http://ggplot2.org/) is _the_ visualization framework. Made by Hadley Wickham.
