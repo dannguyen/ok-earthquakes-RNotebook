@@ -348,7 +348,7 @@ p <- arrangeGrob(quakesg + datelines + datelabels + ttheme,
                  gasg + datelines + datelabels + ttheme,
                  bottom = textGrob(label = footnotes, x = unit(1, 'cm'),
                                          hjust = 0.0, vjust = 0.3,
-                                         gp = gpar(fontsize = rel(12)))
+                                         gp = gpar(fontsize = rel(10), fontfamily = "Gill Sans MT"))
                  )
 
 plot.new()
