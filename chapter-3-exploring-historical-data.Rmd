@@ -123,81 +123,11 @@ nrow(states_quakes)
 
 
 
-Add a `is_OK` conveneince column to `states_quakes`:
+Add a `is_OK` convenience column to `states_quakes`:
 
 ```{r, warning = F, message = F}
 states_quakes$is_OK <- states_quakes$STUSPS == "OK"
 ```
-
-
-Let's try a map:
-
-```{r, warning = F, message = F}
-# For mapping purposes, we'll make a contiguous-states only
-cg_map <- states_map[!states_map$STUSPS %in% c('AK', 'HI'), ]
-cg_quakes <- states_quakes[!states_quakes$STUSPS  %in% c('AK', 'HI'), ]
-```
-
-```{r, earthquakes_by_era_since_1995_overplotted, warning = F, message = F}
-ggplot() +
-  geom_polygon(data = cg_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
-  geom_point(data = cg_quakes, aes(x = longitude, y = latitude), shape = 1, color = "red", alpha = 0.2) +
-  coord_map("albers", lat0 = 38, latl = 42) +
-  theme_dan_map() +
-  ggtitle("M3.0+ earthquakes in U.S. since 1995")
-
-```
-
-
-By era:
-
-Legend hack: http://stackoverflow.com/questions/5290003/how-to-set-legend-alpha-with-ggplot2
-
-```{r, earthquakes_by_era_since_1995_plotted_by_era, warning = F, message = F}
-ggplot() +
-  geom_polygon(data = cg_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
-  geom_point(data = cg_quakes, aes(x = longitude, y = latitude, color = era), shape = 4,  alpha = 0.2) +
-  coord_map("albers", lat0 = 38, latl = 42) +
-  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
-  theme_dan_map() +
-  ggtitle("M3.0+ earthquakes in U.S. since 1995")
-
-```
-
-Small multiples:
-
-```{r, small_multiples_earthquakes_by_era_since_1995, warning = F, message = F}
-ggplot() +
-  geom_polygon(data = cg_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
-  geom_point(data = cg_quakes, aes(x = longitude, y = latitude), shape = 4,  alpha = 0.2, color = "red") +
-  coord_map("albers", lat0 = 38, latl = 42) +
-  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
-  theme_dan_map() +
-  facet_wrap(~ era) +
-  ggtitle("M3.0+ earthquakes in U.S. by time period")
-```
-
-Small multiples focused on Oklahoma:
-
-```{r, small_multiples_OK_only, warning = F, message = F}
-# Dataframe of just Oklahoma quakes:
-ok_quakes <- filter(states_quakes, is_OK)
-# map of just Oklahoma state:
-ok_map <- states_map[states_map$STUSPS == 'OK',]
-```
-
-```{r, small_multiples_oklahoma_map_quakes, fig.cap = "Small Multiples Oklahoma"}
-ggplot() +
-  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
-  geom_point(data = ok_quakes, aes(x = longitude, y = latitude), shape = 4,  alpha = 0.5, color = "red") +
-  coord_map("albers", lat0 = 38, latl = 42) +
-  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
-  theme_dan_map() +
-  facet_wrap(~ era) +
-  ggtitle("M3.0+ earthquakes in Oklahoma by time period")
-```
-
-
 
 
 

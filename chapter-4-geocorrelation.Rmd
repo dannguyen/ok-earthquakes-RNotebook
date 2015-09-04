@@ -1,5 +1,5 @@
 ---
-title: "Chapter 4: Geolocation data"
+title: "Chapter 4: Correlations and Limitations"
 author: "Dan Nguyen"
 date: "August 17, 2015"
 output:
@@ -9,7 +9,7 @@ output:
 
 <span id="chapter-4-mark"></span>
 
-# Chapter 4
+# Chapter 4: Correlations and Limitations
 
 
 Questions to answer:
@@ -35,6 +35,7 @@ library(lubridate)
 library(rgdal)
 library(readxl)
 library(scales)
+library(ggmap)
 # load my themes:
 source("./myslimthemes.R")
 theme_set(theme_dan())
@@ -60,15 +61,10 @@ us_map <- readOGR("./data/shp/cb_2014_us_state_20m.shp", "cb_2014_us_state_20m")
 states_map <- us_map[!us_map$STUSPS %in%
                         c('AS', 'DC', 'GU', 'MP', 'PR', 'VI'),]
 
-# For mapping purposes, we'll make a contiguous-states only
-cg_map <- states_map[!states_map$STUSPS %in% c('AK', 'HI'), ]
-# And for Oklahoma
-ok_map <- states_map[states_map$STUSPS == 'OK', ]
-
 ```
 
 
-Download the quakes data as before:
+Download and read the quakes data as before:
 
 
 ```{r, warning = F, message = F}
@@ -85,8 +81,13 @@ if (!file.exists(zname) || file.size(zname) < 2048){
 unzip(zname, exdir="data")
 # read the data into a dataframe
 usgs_data <- read.csv(fn, stringsAsFactors = FALSE)
+```
 
-# Remove all non earthquakes and events with magnitude less than 3.0:
+Filter and mutate the data
+
+```{r, warning = F, message = F}
+# Remove all non earthquakes and events
+# with magnitude less than 3.0:
 quakes <- usgs_data %>% filter(mag >= 3.0) %>%
   filter(type == 'earthquake')
 
@@ -95,20 +96,91 @@ quakes$year <- year(quakes$time)
 quakes <- mutate(quakes, era = ifelse(year <= 2000, "1995-2000",
           ifelse(year <= 2005, "2001-2005",
           ifelse(year <= 2010, "2006-2010", "2011-2015"))))
+```
 
-# Create a spatial data frame----------------------------------
+```{r, warning = F, message = F}
 sp_quakes <- SpatialPointsDataFrame(data = quakes,
-                          coords = quakes[,c("longitude", "latitude")])
+                coords = quakes[,c("longitude", "latitude")])
 sp_quakes@proj4string <- states_map@proj4string
-
 # subset for earthquakes in the U.S.
 xdf <- over(sp_quakes, states_map[, 'STUSPS'])
 states_quakes <- cbind(sp_quakes, xdf) %>% filter(!is.na(STUSPS))
-
-# And for convenience, OK-only
-ok_quakes <- filter(states_quakes, STUSPS == 'OK')
+# add a convenience column for Oklahoma:
+states_quakes <- mutate(states_quakes, is_OK = STUSPS == 'OK')
 ```
 
+
+
+## Mapping the quakes
+
+
+For mapping purposes, we'll make a contiguous-states only. Remember in the previous chapter, we saw how Oklahoma's recent earthquake activity outpaced all of the U.S., including Alaska and Hawaii. And more importantly, remember that I don't know how to transpose Alaska and Hawaii neatly on to an Albers projection:
+
+```{r, warning = F, message = F}
+cg_map <- states_map[!states_map$STUSPS %in% c('AK', 'HI'), ]
+cg_quakes <- states_quakes[!states_quakes$STUSPS  %in% c('AK', 'HI'), ]
+```
+
+Trying to map all the quakes leads to the unavoidable problem of overplotting:
+
+```{r, earthquakes_by_era_since_1995_overplotted, warning = F, message = F}
+ggplot() +
+  geom_polygon(data = cg_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
+  geom_point(data = cg_quakes, aes(x = longitude, y = latitude), shape = 1, color = "red", alpha = 0.2) +
+  coord_map("albers", lat0 = 38, latl = 42) +
+  theme_dan_map() +
+  ggtitle("M3.0+ earthquakes in U.S. since 1995")
+
+```
+
+
+By era:
+
+Legend hack: http://stackoverflow.com/questions/5290003/how-to-set-legend-alpha-with-ggplot2
+
+```{r, earthquakes_by_era_since_1995_plotted_by_era, warning = F, message = F}
+ggplot() +
+  geom_polygon(data = cg_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
+  geom_point(data = cg_quakes, aes(x = longitude, y = latitude, color = era), shape = 4,  alpha = 0.2) +
+  coord_map("albers", lat0 = 38, latl = 42) +
+  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
+  theme_dan_map() +
+  ggtitle("M3.0+ earthquakes in U.S. since 1995")
+
+```
+
+Small multiples:
+
+```{r, small_multiples_earthquakes_by_era_since_1995, warning = F, message = F}
+ggplot() +
+  geom_polygon(data = cg_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
+  geom_point(data = cg_quakes, aes(x = longitude, y = latitude), shape = 4,  alpha = 0.2, color = "red") +
+  coord_map("albers", lat0 = 38, latl = 42) +
+  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
+  theme_dan_map() +
+  facet_wrap(~ era) +
+  ggtitle("M3.0+ earthquakes in U.S. by time period")
+```
+
+Small multiples focused on Oklahoma:
+
+```{r, small_multiples_OK_only, warning = F, message = F}
+# Dataframe of just Oklahoma quakes:
+ok_quakes <- filter(states_quakes, is_OK)
+# map of just Oklahoma state:
+ok_map <- states_map[states_map$STUSPS == 'OK',]
+```
+
+```{r, small_multiples_oklahoma_map_quakes, fig.cap = "Small Multiples Oklahoma"}
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
+  geom_point(data = ok_quakes, aes(x = longitude, y = latitude), shape = 4,  alpha = 0.5, color = "red") +
+  coord_map("albers", lat0 = 38, latl = 42) +
+  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
+  theme_dan_map() +
+  facet_wrap(~ era) +
+  ggtitle("M3.0+ earthquakes in Oklahoma by time period")
+```
 
 
 
@@ -381,3 +453,59 @@ The study, titled "Oklahoma's Recent Earthquakes and Saltwater Disposal," was fu
 
 
 http://news.stanford.edu/news/2015/june/okla-quake-drilling-061815.html
+
+
+
+## Trying Google Maps
+
+
+```{r}
+library(ggmap)
+ok_goog_map <- get_googlemap(center = c(lon = -98.682862, lat = 35.517324),  size = c(500,500), zoom = 6, scale = 2, maptype = 'hybrid',
+style = c(feature = "administrative.province", element = "labels", visibility = "off"))
+```
+
+With points
+
+```{r}
+ggmap(ok_goog_map, extent = 'panel') +
+  geom_point(data = ok_quakes, aes(x = longitude, y = latitude), alpha = 0.2, shape = 4, colour = "red")
+```
+
+
+With hexbin:
+
+```{r}
+ggmap(ok_goog_map, extent = 'panel') +
+  stat_binhex(data = ok_quakes, aes(x = longitude, y = latitude, alpha = ..count..), bins = 30 ) +
+  scale_fill_gradientn(colours=c("white","red")) +
+  guides(alpha = FALSE)
+```
+
+
+Focus on Oklahoma City area:
+
+
+```{r}
+okcity_goog_map  <- get_googlemap(center = c(lon = -97.437287, lat = 36.1815),  size = c(640,640), zoom = 9, scale = 2, maptype = 'hybrid',
+style = c(feature = "administrative.province", element = "labels", visibility = "off"))
+
+```
+
+Hexbin
+```{r}
+ggmap(okcity_goog_map) +
+  stat_binhex(data = ok_quakes, aes(x = longitude, y = latitude, alpha = ..count..), bins = 30 ) +
+  scale_fill_gradientn(colours=c("white","red")) +
+  guides(alpha = FALSE) + theme_dan_map()
+
+```
+
+
+
+## Things TODO
+
+- Use USGS Geologic map data: https://mrdata.usgs.gov/geology/state/state.php?state=OK
+
+
+

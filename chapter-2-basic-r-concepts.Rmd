@@ -31,17 +31,18 @@ library(grid)
 library(dplyr)
 library(lubridate)
 library(rgdal)
-library(hexbin) # install.packages('hexbin')
+library(hexbin)
+library(ggmap)
 ```
 
 - [ggplot2](http://ggplot2.org/) is _the_ visualization framework.
-- [dplyr](https://cran.rstudio.com/web/packages/dplyr/vignettes/introduction.html) is a library for manipulating, transforming, and aggregating data frames. It also has [nice piping](http://seananderson.ca/2014/09/13/dplyr-intro.html), which warms the Unix programmer inside me.
+- [dplyr](https://cran.rstudio.com/web/packages/dplyr/vignettes/introduction.html) is a library for manipulating, transforming, and aggregating data frames. It also utilizes the [nice piping](http://seananderson.ca/2014/09/13/dplyr-intro.html) from the [magrittr package](https://cran.r-project.org/web/packages/magrittr/index.html), which warms the Unix programmer inside me.
 - [lubridate](https://github.com/hadley/lubridate) - Greatly eases working with time values when generating time-series and time-based filters. Think of it as [moment.js for R](http://momentjs.com/).
 - [scales](https://github.com/hadley/scales) - Provides helpers for making scales for our ggplot2 charts.
 - [grid](https://stat.ethz.ch/R-manual/R-devel/library/grid/html/grid-package.html) - contains some functionality that ggplot2 uses for chart styling and arrangement. including the [unit()](https://stat.ethz.ch/R-manual/R-devel/library/grid/html/unit.html) function.
 - [hexbin](https://cran.r-project.org/web/packages/hexbin/index.html) - Used with ggplot2 to make hexbin maps.
 - [rgdal](https://cran.r-project.org/web/packages/rgdal/index.html) - bindings for geospatial operations, including map projection and the reading of map shapefiles. Can be a bear to install due to a variety of dependencies. If you're on OS X, I recommend [installing Homebrew](http://brew.sh/) and running `brew install gdal` before installing the rgdal package via R.
-
+- [ggmap](https://cran.r-project.org/web/packages/ggmap/index.html) - Another ggplot2 plugin that allows the plotting of geospatial data on top of map imagery from Google Maps, OpenStreetMap, and Stamen Maps.
 
 
 ### Customizing the themes
@@ -758,15 +759,58 @@ ggplot() +
 
 
 
+### Google Satellite Maps
+
+In lieu of using shapefiles that contain geological features:
+
+```{r, message = F, warning = F}
+goog_map <- get_googlemap(center = "Oklahoma",  size = c(500,500), zoom = 6, scale = 2, maptype = 'terrain')    
+```
+
+We use `ggmap()` to draw it as a plot:
+
+```{r, aug_2015_terrain_goog_map_default, message = F, warning = F}
+ggmap(goog_map) + theme_dan_map()
+```
+
+Use [Google feature styles to remove administrative labels](https://developers.google.com/maps/documentation/javascript/reference#MapTypeStyleFeatureType):
+
+
+```{r, message = F, warning = F}
+goog_map2 <- get_googlemap(center = "Oklahoma",  size = c(500,500), 
+  zoom = 6, scale = 2, maptype = 'terrain', 
+  style = c(feature = "administrative.province", element = "labels", visibility = "off"))
+# plot the map
+ggmap(goog_map2) + theme_dan_map()
+```
+
+
+With points
+
+```{r, aug_2015_terrain_goog_map_dots, message = F, warning = F}
+ggmap(goog_map2, extent = 'panel') +
+  geom_point(data = states_quakes, aes(x = longitude, y = latitude), alpha = 0.2, shape = 4, colour = "red") + theme_dan_map()
+```
+
+With hexbin and satellite:
+
+
+With hexbin, note that we don't use Albers projection:
+
+```{r, aug_2015_hybrid_goog_map_hexbin, message = F, warning = F}
+hybrid_goog_map <-  get_googlemap(center = "Oklahoma",  size = c(640,640), zoom = 6, scale = 2, maptype = 'hybrid',
+style = c(feature = "administrative.province", element = "labels", visibility = "off"))    
+  
+ggmap(hybrid_goog_map, extent = 'panel') +
+  stat_binhex(data = states_quakes, aes(x = longitude, y = latitude), bins = 30, alpha = 0.3 ) +
+  scale_fill_gradientn(colours=c("pink","red")) +
+  guides(alpha = FALSE) + theme_dan_map()
+```
+
 
 
 
 At this point, we've covered just the general range of the data-munging and visualization techniques we need to effectively analyze and visualize the historical earthquake data for the United States.
-
-
-
-
-
 
 
 
