@@ -42,12 +42,13 @@ if (!file.exists(zname) || file.size(zname) < 2048){
 }
 unzip(zname, exdir="data")
 # read the data into a dataframe
-print("Reading 20 years worth of USGS earthquake data")
+print("Reading 20 years worth of USGS earthquake data...")
 usgs_data <- read.csv(fn, stringsAsFactors = FALSE)
 
 
 ##############################################################
 # Filter quake data
+print("Filtering for 2005 to 2015 data...")
 quakes <- usgs_data %>% filter(year(time) >= 2005, mag >= 3.0) %>%
   filter(type == 'earthquake') %>%
   mutate(year_month = strftime(time, '%Y-%m'))
@@ -63,7 +64,7 @@ cg_quakes <- mutate(cg_quakes, is_OK = ifelse(STUSPS == 'OK', 'OK', 'Other'))
 
 ##############################################################
 # Make the map -------------------------
-gggmap <- ggplot() +
+my_map <- ggplot() +
   geom_polygon(data = cg_map, aes(x = long, y = lat, group = group),
                    fill = "transparent", color = "#444444", size = 0.1) +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
@@ -71,19 +72,19 @@ gggmap <- ggplot() +
 
 make_quake_map <- function(yrmth){
   this_data <- filter(cg_quakes, year_month == yrmth)
-  gggmap +
+  my_map +
     geom_point(data = this_data, aes(longitude, latitude),
                  size = 1.5,
                  alpha = 0.25,
-                 shape = 8,
-                 color = '#990000')  +
+                 shape = 4,
+                 color = '#BB2222')  +
     coord_map("albers", lat0 = 38, latl = 42) +
     theme_dan_map() +
     theme(plot.margin=unit(c(-0.5, -1, 0, -1), "cm"))
 }
 
 
-gggbar <- ggplot(cg_quakes, aes(factor(year_month))) +
+my_hist <- ggplot(cg_quakes, aes(factor(year_month))) +
           geom_histogram(alpha = 0.3, aes(fill = is_OK),
                          binwidth = 1, position = "stack", width = 1.0)
 
@@ -94,7 +95,7 @@ make_quake_histogram <- function(yrmth){
   # hardcoding this because I'm a weenie
   x_lbl_hjust = ifelse(yrmth > "2015", 1.0, 0.0)
   this_data <- filter(cg_quakes, year_month == yrmth)
-  gggbar +
+  my_hist +
     geom_histogram(data = this_data, alpha = 1.0, color = "#444444", size = 0.1,
       aes(fill = is_OK), binwidth = 1, position = "stack", width = 1.0) +
     scale_y_continuous(breaks=c(100, 200), expand = c(0, 0), limits = c(0, 200)) +

@@ -2,6 +2,9 @@
 title: "Chapter 3: Exploring the Historical Data"
 ---
 
+<span id="chapter-3-mark"></span>
+
+
 # Chapter 3: Exploring the Historical Data
 
 Questions to ask:
@@ -122,20 +125,20 @@ nrow(states_quakes)
 
 Add a `is_OK` conveneince column to `states_quakes`:
 
-```{r}
+```{r, warning = F, message = F}
 states_quakes$is_OK <- states_quakes$STUSPS == "OK"
 ```
 
 
 Let's try a map:
 
-```{r}
+```{r, warning = F, message = F}
 # For mapping purposes, we'll make a contiguous-states only
 cg_map <- states_map[!states_map$STUSPS %in% c('AK', 'HI'), ]
 cg_quakes <- states_quakes[!states_quakes$STUSPS  %in% c('AK', 'HI'), ]
 ```
 
-```{r}
+```{r, earthquakes_by_era_since_1995_overplotted, warning = F, message = F}
 ggplot() +
   geom_polygon(data = cg_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
   geom_point(data = cg_quakes, aes(x = longitude, y = latitude), shape = 1, color = "red", alpha = 0.2) +
@@ -150,7 +153,7 @@ By era:
 
 Legend hack: http://stackoverflow.com/questions/5290003/how-to-set-legend-alpha-with-ggplot2
 
-```{r}
+```{r, earthquakes_by_era_since_1995_plotted_by_era, warning = F, message = F}
 ggplot() +
   geom_polygon(data = cg_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
   geom_point(data = cg_quakes, aes(x = longitude, y = latitude, color = era), shape = 4,  alpha = 0.2) +
@@ -163,7 +166,7 @@ ggplot() +
 
 Small multiples:
 
-```{r}
+```{r, small_multiples_earthquakes_by_era_since_1995, warning = F, message = F}
 ggplot() +
   geom_polygon(data = cg_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
   geom_point(data = cg_quakes, aes(x = longitude, y = latitude), shape = 4,  alpha = 0.2, color = "red") +
@@ -176,7 +179,7 @@ ggplot() +
 
 Small multiples focused on Oklahoma:
 
-```{r}
+```{r, small_multiples_OK_only, warning = F, message = F}
 # Dataframe of just Oklahoma quakes:
 ok_quakes <- filter(states_quakes, is_OK)
 # map of just Oklahoma state:
@@ -207,7 +210,7 @@ Look at breakdown of earthquakes worldwide versus United States:
 
 Total
 
-```{r}
+```{r, histogram_all_earthquakes, warning = F, message = F}
 ggplot(data = world_quakes, aes(x = year)) +
   geom_histogram(binwidth = 1)
 ```
@@ -215,7 +218,7 @@ ggplot(data = world_quakes, aes(x = year)) +
 
 U.S. vs Non US:
 
-```{r}
+```{r, histogram_us_vs_non_us_earthquakes_only, warning = F, message = F}
 ggplot(data = world_quakes, aes(x = year, fill = is.na(STUSPS))) +
   geom_histogram(binwidth = 1) +
   scale_fill_manual(values = c("red", "gray"), labels = c("Within U.S.", "Outside U.S.")) +
@@ -225,7 +228,7 @@ ggplot(data = world_quakes, aes(x = year, fill = is.na(STUSPS))) +
 
 U.S. earthquakes only
 
-```{r, message = F}
+```{r, histogram_us_earthquakes_only, message = F}
 ggplot(data = states_quakes, aes(x = year)) +
   geom_histogram(binwidth = 1) +
   scale_y_continuous(expand = c(0, 0))
@@ -237,7 +240,7 @@ ggplot(data = states_quakes, aes(x = year)) +
 Plot a histogram of all of the earthquakes by state since 1995, and highlight Oklahoma in orange:
 
 
-```{r, message = F}
+```{r, histogram_states_earthquakes_since_1995, message = F}
 ggplot(states_quakes, aes(STUSPS)) +
    geom_histogram(binwidth = 1, width = 0.5) +
    geom_histogram(data = filter(states_quakes, is_OK), binwidth = 1, fill="#FF6600", width = 0.5) +
@@ -251,7 +254,7 @@ Reduce the noise by filtering out states. Only a few states have a significant n
 Order the x-axis by count: http://stackoverflow.com/questions/20041136/how-to-avoid-ggplot-sorting-the-x-axis-while-plotting-geom-bar
 
 
-```{r, message = F}
+```{r, sorted_states_top_earthquakes, message = F}
 # Apparently there's a reorder() convention...rather than look that up, I've just decided to set the factor manually
 qcounts <- states_quakes %>% group_by(STUSPS) %>% summarise(count = n()) %>%
     arrange(desc(count))
@@ -306,7 +309,7 @@ This graph is a little visually misleading, because the `1995-2010` category spa
 
 Let's focus our look at just Oklahoma:
 
-```{r}
+```{r, ok_1995_to_aug_2015_by_year, warning = F, message = F}
 ggplot(data = ok_quakes, aes(year)) +
   scale_y_continuous(expand = c(0, 0)) +
   geom_histogram(binwidth = 1, fill = "#DDCCCC") +
@@ -324,7 +327,7 @@ ggplot(data = ok_quakes, aes(year)) +
 
 Oklahoma earthquakes by month, since 2008
 
-```{r}
+```{r, ok_1995_to_aug_2015_by_month, warning = F, message = F}
 # This manual creation of breaks is the least awkward way I know of creating a
 # continuous scale from month-date and applying it to stat_bin for a more
 # attractive graph
@@ -343,7 +346,7 @@ ggplot(data = filter(ok_quakes, year >= 2008),
 
 Focus on November 2011:
 
-```{r}
+```{r, ok_earthquakes_nov_2011,warning = F, message = F}
 ggplot(data = filter(ok_quakes, year == 2011, month(time) == 11),
        aes(x = floor_date(time, 'day'))) +
   geom_histogram(binwidth = 1, color = "white") +
@@ -418,7 +421,7 @@ mygrid + theme_dan_map()
 Stacked charts
 
 
-```{r}
+```{r, ok_vs_us_combined_from_2008_by_month, warning = F, message = F}
 # This manual creation of breaks is the least awkward way I know of creating a
 # continuous scale from month-date and applying it to stat_bin for a more
 # attractive graph
@@ -440,7 +443,7 @@ ggplot(data = states_quakes_ge_2008, aes(x = ceiling_date(time, 'month'), y = ..
 
 Stacked chart by year
 
-```{r, message = F}
+```{r, ok_vs_us_combined_from_2008_by_year, message = F}
 ggplot(states_quakes, aes(x = factor(year))) +
   geom_histogram(aes(fill = !is_OK), binwidth = 1) +
   scale_fill_manual(values = c("#FF6600", "grey"),
@@ -454,7 +457,7 @@ ggplot(states_quakes, aes(x = factor(year))) +
 Stacked chart, ratio
 
 
-```{r, message = F}
+```{r, ok_vs_us_combined_from_2008_stacked_ratio, message = F}
 ggplot(states_quakes, aes(factor(year))) +
   geom_histogram(aes(fill = factor(ifelse(STUSPS == 'OK', 'OK', 'Other'))) , binwidth = 1, position = "fill") +
   scale_fill_manual(values = c("#FF6600", "grey")) +

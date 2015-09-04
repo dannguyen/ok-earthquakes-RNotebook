@@ -1,6 +1,22 @@
+
+# Chapter 1: Background on Oklahoma's Earthquakes
+
+
 http://www.newyorker.com/magazine/2015/04/13/weather-underground
-https://stateimpact.npr.org/oklahoma/tag/earthquakes/
+
+[NPR's StateImpact project has been covering the issue for the past few years](https://stateimpact.npr.org/oklahoma/tag/earthquakes/)
 
 
 <iframe width="853" height="480" src="https://www.youtube.com/embed/AIu3b0WhMgs?rel=0" frameborder="0" allowfullscreen></iframe>
 
+<span id="chapter-1-mark"></span>
+
+
+
+## The U.S. Geological Survey Earthquake Data
+
+## The U.S. Census Map Boundaries
+
+## About the Oklahoma Corporation Commission
+
+http://www.occeweb.com/og/ogdatafiles2.htm

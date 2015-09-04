@@ -1,5 +1,5 @@
 # run like this:
-#   python3 scripts/convert_md.py
+#   python3 scripts/make_md.py
 # expects md/ to exist
 
 from glob import glob
@@ -18,18 +18,12 @@ makedirs(FINAL_IMAGE_PATH, exist_ok = True)
 FINAL_MD_PATH = join(FINAL_PATH, '_posts', '2015-09-01-oklahoma-earthquakes-r-ggplot2.md')
 
 
-PROJECTS = ['chapter-2-basic-r-concepts', 'chapter-3-exploring-historical-data']
+PROJECTS = ['chapter-1-intro',
+'chapter-2-basic-r-concepts',
+'chapter-3-exploring-historical-data',
+'chapter-4-geocorrelation']
 
-final_mdtext = """---
-title: Investigating Oklahoma's earthquake surge with R and ggplot2
-status: unfinished
----
-
-* TOC
-{:toc}
-
-
-"""
+final_mdtext = open("./chapter-0.md").read()
 
 base_dir = realpath('.')
 for project_name in PROJECTS:

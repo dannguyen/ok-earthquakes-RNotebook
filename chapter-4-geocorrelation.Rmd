@@ -7,6 +7,11 @@ output:
     variant: markdown_github
 ---
 
+<span id="chapter-4-mark"></span>
+
+# Chapter 4
+
+
 Questions to answer:
 - What are the geospatial characteristics of the recent Earthquakes?
 - Is the recent spurt of earthquakes located in one area?
@@ -20,10 +25,11 @@ Questions to answer:
 
 
 
-```{r, message = FALSE}
+```{r, warning = F, message = FALSE}
 # Load libraries
 library(ggplot2)
-require(grid)
+library(grid)
+library(gridExtra)
 library(dplyr)
 library(lubridate)
 library(rgdal)
@@ -40,7 +46,7 @@ dir.create('./data')
 
 Download the map data as before:
 
-```{r, message = F}
+```{r, warning = F, message = F}
 fname <- "./data/cb_2014_us_state_20m.zip"
 if (!file.exists(fname)){
   url <- "http://www2.census.gov/geo/tiger/GENZ2014/shp/cb_2014_us_state_20m.zip"
@@ -65,7 +71,7 @@ ok_map <- states_map[states_map$STUSPS == 'OK', ]
 Download the quakes data as before:
 
 
-```{r, message = F}
+```{r, warning = F, message = F}
 fn <- './data/usgs-quakes-dump.csv'
 zname <- paste(fn, 'zip', sep = '.')
 if (!file.exists(zname) || file.size(zname) < 2048){
@@ -113,6 +119,9 @@ ok_quakes <- filter(states_quakes, STUSPS == 'OK')
 
 
 
+
+
+
 ## Injection volumes
 
 Download # http://www.occeweb.com/og/ogdatafiles2.htm
@@ -120,7 +129,7 @@ Download # http://www.occeweb.com/og/ogdatafiles2.htm
 
 2013:
 
-```{r, message = F}
+```{r, warning = F, message = F}
 fname <- "./data/2013_UIC_Injection_Volumes_Report.xlsx"
 if (!file.exists(fname)){
   url <- "http://www.occeweb.com/og/2013%20UIC%20Injection%20Volumes%20Report.xlsx"
@@ -142,7 +151,7 @@ Aggregate the wells by their unique identifier and create a `total_volume` colum
 
 
 ```{r}
-wells_2013 <-  as.data.frame(group_by(injections_2013, API) %>%
+wells_2013 <-  as.data.frame(group_by(injections_2013, API, X, Y) %>%
     summarise(counts = n(), total_volume = sum(Volume)) %>%
     arrange(desc(counts)))
 ```
@@ -234,40 +243,27 @@ sp_ok_quakes <- SpatialPointsDataFrame(data = ok_quakes,
                           coords = ok_quakes[,c("longitude", "latitude")])
 proj4string(sp_ok_quakes) <- proj4string(ok_map)
 
-sp_injections <- SpatialPointsDataFrame(data = injections,
-                          coords = injections[,c("X", "Y")])
+sp_wells_2013 <- SpatialPointsDataFrame(data = wells_2013,
+                          coords = wells_2013[,c("X", "Y")])
 
-proj4string(sp_injections) <- proj4string(ok_map)
+proj4string(sp_wells_2013) <- proj4string(ok_map)
 
 albers_crs <- CRS("+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs")
 ok_map.albers <- spTransform(ok_map, albers_crs)
 ok_quakes.albers <- as.data.frame(spTransform(sp_ok_quakes, albers_crs))
-injections.albers <- as.data.frame(spTransform(sp_injections, albers_crs))
+wells_2013.albers <- as.data.frame(spTransform(sp_wells_2013, albers_crs))
 
 ###0-----------
 # look ma, no coord_map
 ggplot() +
   geom_polygon(data = ok_map.albers, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
-  geom_point(data = filter(injections.albers, total_volume > 100000),
+  geom_point(data = filter(wells_2013.albers, total_volume > 100000),
              aes(x = X, y = Y),
              alpha = 0.1 , color = 'yellow') +
 
   geom_point(data = ok_quakes.albers, aes(x = longitude, y = latitude),
             alpha = 0.1, size = 0.2, shape = 1, color = 'red')
-```
-
-
-
-## Google map
-
-
-```{r}
-library(ggmap)
-#googmap <- get_googlemap(center = "Oklahoma", maptype = "satellite", zoom = 7, size = c(800,500), sensor = FALSE)
-
-ggmap(get_googlemap(urlonly = FALSE), extent = "panel")
-
 ```
 
 
@@ -299,24 +295,22 @@ gasdata <- read.csv("./data/stlouisfed-oil-prices.csv", stringsAsFactors = F) %>
 
 
 ```{r}
-
-
 okquakes_weekly <- mutate(ok_quakes, week = floor_date(time, 'week'), panel = 'Quakes') %>%
   filter(year(time) >= 2008) %>%
-  group_by(week) %>% 
+  group_by(week) %>%
   summarize(count = n())
-  
+
 
 gp <- ggplot() + scale_x_date(breaks = pretty_breaks(),
                               limits = c(as.Date('2008-01-01'), as.Date('2015-08-31')))
-                 
+
 quakesg <- gp + geom_bar(data = okquakes_weekly, aes(x = week, y = count), stat = "identity", position = 'identity', color = 'black') +
   scale_y_continuous(expand = c(0, 0)) +
   ggtitle("Weekly Counts of M3.0+ Earthquakes in Oklahoma")
 
-gasg <- gp + geom_line(data = gasdata, aes(x = week, y = avg_value), size = 0.5, color = 'black') +   
+gasg <- gp + geom_line(data = gasdata, aes(x = week, y = avg_value), size = 0.5, color = 'black') +
   scale_y_continuous(expand = c(0, 0), limits = c(0, 150)) +
-  ggtitle("Weekly Average Oil Prices, Dollars per Barrel") 
+  ggtitle("Weekly Average Oil Prices, Dollars per Barrel")
 ```
 
 
@@ -332,7 +326,7 @@ annotations <- list(
 
 datelines <- lapply(annotations, function(a){
   wk <- as.numeric(floor_date(as.Date(a$date), 'week'))
-  geom_vline(xintercept = wk, color = "red", 
+  geom_vline(xintercept = wk, color = "red",
              linetype = 'dashed')
 })
 
@@ -343,20 +337,20 @@ datelabels <- lapply(annotations, function(a){
 
 ttheme <- theme(plot.title = element_text(size = 12))
 
-footnotes = paste(lapply(annotations, function(a){ 
-              paste(a$letter, 
-              paste(strftime(a$date, '%b %d, %Y'), a$label, sep = ' - '), 
+footnotes = paste(lapply(annotations, function(a){
+              paste(a$letter,
+              paste(strftime(a$date, '%b %d, %Y'), a$label, sep = ' - '),
               sep = '. ')
-    }), 
+    }),
   collapse = '\n')
 
 p <- arrangeGrob(quakesg + datelines + datelabels + ttheme,
-                 gasg + datelines + datelabels + ttheme,                  
-                 bottom = textGrob(label = footnotes, x = unit(1, 'cm'), 
+                 gasg + datelines + datelabels + ttheme,
+                 bottom = textGrob(label = footnotes, x = unit(1, 'cm'),
                                          hjust = 0.0, vjust = 0.3,
                                          gp = gpar(fontsize = rel(12)))
-                 ) 
-     
+                 )
+
 plot.new()
 grid.draw(p)
 ```
