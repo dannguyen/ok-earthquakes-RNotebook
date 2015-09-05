@@ -88,8 +88,7 @@ Filter and mutate the data
 ```{r, warning = F, message = F}
 # Remove all non earthquakes and events
 # with magnitude less than 3.0:
-quakes <- usgs_data %>% filter(mag >= 3.0) %>%
-  filter(type == 'earthquake')
+quakes <- usgs_data %>% filter(mag >= 3.0, type == 'earthquake')
 
 quakes$time <- as.Date(quakes$time)
 quakes$year <- year(quakes$time)
@@ -512,9 +511,9 @@ okqs <- filter(ok_quakes, year == 2010 | year == 2015)
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
-  geom_point(data = okqs, aes(x = longitude, y = latitude)) + 
+  geom_point(data = okqs, aes(x = longitude, y = latitude)) +
   #  stat_density2d(data = okqs, aes(x = longitude, y = latitude, fill = ..level..), geom = 'polygon') +
-  #coord_map("albers", lat0 = 38, latl = 42) + 
+  #coord_map("albers", lat0 = 38, latl = 42) +
   theme_dan_map() +
   facet_wrap(~ year)
 ```
@@ -529,19 +528,19 @@ xqs <- filter(states_quakes, year >= 2010)
 ggmap(ok_goog_map, extent = 'panel') +
     geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = NA, color = "#552200", size = 0.5) +
-  geom_point(data = xqs, aes(x = longitude, y = latitude), color = "red", shape = 1) + 
-#  geom_text(data = xqs, aes(label = year, x = -97.8, y = 39.0), size = rel(7.0), vjust = 1.0, color = "black", face = dan_base_font()) + 
+  geom_point(data = xqs, aes(x = longitude, y = latitude), color = "red", shape = 1) +
+#  geom_text(data = xqs, aes(label = year, x = -97.8, y = 39.0), size = rel(7.0), vjust = 1.0, color = "black", face = dan_base_font()) +
 
-#    annotate("text",  x = -97.8, y = 39.0, size = rel(4.0), 
-#             label = ok_map$year, vjust = 1.0, fontface = 'bold', 
-#             color = "red", hjust = 1.5) + 
+#    annotate("text",  x = -97.8, y = 39.0, size = rel(4.0),
+#             label = ok_map$year, vjust = 1.0, fontface = 'bold',
+#             color = "red", hjust = 1.5) +
   theme_dan_map() +
   theme(
-#        strip.text = element_blank(), 
-    strip.text = element_text(vjust = -5.2, size = rel(4.0)),    
+#        strip.text = element_blank(),
+    strip.text = element_text(vjust = -5.2, size = rel(4.0)),
     panel.margin = unit(c(-1,-1,-1,-1), 'lines')
    ) +
-      facet_wrap(~ year, ncol = 3) 
+      facet_wrap(~ year, ncol = 3)
 
 
 ```
