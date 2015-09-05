@@ -62,6 +62,9 @@ states_map <- us_map[!us_map$STUSPS %in%
 We won't be mapping Alaska but including it is critical for analysis.
 
 
+
+<a id="batch-downloading-historical-data"></a>
+
 ### Download the historical quake data
 
 TK explanation.

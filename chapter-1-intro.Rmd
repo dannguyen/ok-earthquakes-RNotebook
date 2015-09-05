@@ -7,13 +7,49 @@ http://www.newyorker.com/magazine/2015/04/13/weather-underground
 [NPR's StateImpact project has been covering the issue for the past few years](https://stateimpact.npr.org/oklahoma/tag/earthquakes/)
 
 
+For a 3-minute video primer on the issue, check out this clip by Reveal/The Center for Investigative Reporting:
+
 <iframe width="853" height="480" src="https://www.youtube.com/embed/AIu3b0WhMgs?rel=0" frameborder="0" allowfullscreen></iframe>
+
+
+### The cause
+
+In a [2013 article from Mother Jones](http://www.motherjones.com/environment/2013/03/does-fracking-cause-earthquakes-wastewater-dewatering):
+
+> Jean Antonides, vice president of exploration for New Dominion, which operates one of the wells near the Wilzetta Fault. He informed me that people claiming to know the true source of the Oklahoma quakes are "either lying to your face or they're idiots."
+
+The industry's general response is that, yes, earthquakes are happening. But that doesn't mean it's _their_ fault. Until recently, they had the backing of the [Oklahoma Geological Survey](http://www.ogs.ou.edu/homepage.php) (OGS). In a [position statement released in February 2014](http://www.ogs.ou.edu/pdf/OGS_POSITION_STATEMENT_2_18_14.pdf):
+
+> Overall, the majority, but not all, of the recent earthquakes appear
+to be the result of natural stresses, since they are consistent with the regional Oklahoma natural stress field.
+
+
+### Current drilling activity
+
+
 
 <span id="chapter-1-mark"></span>
 
 
 
 ## The U.S. Geological Survey Earthquake Data
+
+
+For quick access, the USGS provides real-time data feeds for time periods between an hour to the last 30 days. The [Feeds & Notifications page](http://earthquake.usgs.gov/earthquakes/feed/v1.0/) shows a menu of data formats and services. For our purposes, the [Spreadsheet Format option](http://earthquake.usgs.gov/earthquakes/feed/v1.0/csv.php) is good enough.
+
+
+To access the entirety of the USGS data, visit their [Archive page](http://earthquake.usgs.gov/earthquakes/search/).
+
+In Chapter 3, I briefly explain the [relatively simple code for automating the collection of this data](#batch-downloading-historical-data). The process isn't that interesting though so if you just want the zipped up data, you can find it in the [repo's __/data__ directory](https://github.com/dannguyen/ok-earthquakes-RNotebook/tree/master/data), in the file named [usgs-quakes-dump.csv.zip](https://github.com/dannguyen/ok-earthquakes-RNotebook/blob/master/data/usgs-quakes-dump.csv.zip). It weighs in at 27.1MB zipped, 105MB uncompressed.
+
+
+#### Data attributes
+
+- [time](http://earthquake.usgs.gov/earthquakes/feed/v1.0/glossary.php#time)
+- [latitude and longitude](http://earthquake.usgs.gov/earthquakes/feed/v1.0/glossary.php#latitude)
+- [mag](http://earthquake.usgs.gov/earthquakes/feed/v1.0/glossary.php#mag), i.e. magnitude
+- [type](http://earthquake.usgs.gov/earthquakes/feed/v1.0/glossary.php#type), as in, type of seismic event, which includes earthquakes, explosions, and quarry.
+-
 
 ## The U.S. Census Map Boundaries
 
