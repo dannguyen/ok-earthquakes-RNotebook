@@ -76,7 +76,7 @@ make_quake_map <- function(yrmth){
   my_map +
     geom_point(data = this_data, aes(longitude, latitude),
                  size = 1.3,
-                 alpha = 0.25,
+                 alpha = 0.75,
                  shape = 1,
                  color = '#BB2222')  +
     coord_map("albers", lat0 = 38, latl = 42) +
@@ -103,19 +103,19 @@ make_quake_histogram <- function(yrmth){
     scale_x_discrete(breaks = c(yrmth), labels = c(this_title)) +
     scale_fill_manual(values = c("#FF6600", "grey")) +
     # annotate year marks
-    annotate("text", x = "2005-01", y = 5, size = rel(1.5), hjust = 0.0,
-               label = "2005", fontface = 'bold') +
-    annotate("text", x = "2010-01", y = 5, size = rel(1.5), hjust = 0.0,
-               label = "2010", fontface = 'bold') +
-    annotate("text", x = "2015-01", y = 5, size = rel(1.5), hjust = 0.0,
-               label = "2015", fontface = 'bold') +
+    annotate("text", x = "2005-01", y = 6, size = rel(1.5), hjust = 0.0,
+               label = "2005", fontface = 'bold', family = "Gill Sans MT") +
+    annotate("text", x = "2010-01", y = 6, size = rel(1.5), hjust = 0.0,
+               label = "2010", fontface = 'bold', family = "Gill Sans MT") +
+    annotate("text", x = "2015-01", y = 6, size = rel(1.5), hjust = 0.0,
+               label = "2015", fontface = 'bold', family = "Gill Sans MT") +
     annotate("text", x = yrmth, y = 25, size = rel(1.2), hjust = x_lbl_hjust,
-               label = this_title, lineheight = 0.8) +
+               label = this_title, lineheight = 0.8, family = "Gill Sans MT") +
     # annotate chart text
-    annotate("text", x = "2005-01", y = 100, size = rel(1.5), hjust = 0,
+    annotate("text", x = "2005-01", y = 100, size = rel(1.5), hjust = 0, family = "Gill Sans MT",
                label = c("Earthquakes of at least magnitude 3.0\nin the contiguous United States.\n\nData from the U.S. Geological Survey.\nChart by Dan Nguyen @dancow\nStanford Computational Journalism")
             ) +
-    annotate("text", x = "2013-03", y = 50, size = rel(1.5), hjust = 0,
+    annotate("text", x = "2013-03", y = 50, size = rel(1.5), hjust = 0, family = "Gill Sans MT",
                label = "Oklahoma's portion of earthquakes\nis colored in orange."
             ) +
 
@@ -163,9 +163,9 @@ system("convert /tmp/movie-quakes/movie-quakes-OK.gif -resize 60% /tmp/movie-qua
 system("convert /tmp/movie-quakes/movie-quakes-OK.gif -resize 30% /tmp/movie-quakes/movie-quakes-OK-small.gif")
 
 print("Making optimized version!")
-system("gifsicle -O3 --colors 64 /tmp/movie-quakes/movie-quakes-OK.gif > /tmp/movie-quakes/optimized-movie-quakes-OK.gif")
-system("gifsicle -O3 --colors 64 --resize-width 1000 /tmp/movie-quakes/movie-quakes-OK.gif > /tmp/movie-quakes/optimized-movie-quakes-OK-med.gif")
-system("gifsicle -O3 --colors 64 --resize-width 600 /tmp/movie-quakes/movie-quakes-OK.gif > /tmp/movie-quakes/optimized-movie-quakes-OK-small.gif")
+system("gifsicle -O3 --colors 64 /tmp/movie-quakes/movie-quakes-OK.gif > ./images/optimized-movie-quakes-OK.gif")
+system("gifsicle -O3 --colors 64 --resize-width 1000 /tmp/movie-quakes/movie-quakes-OK.gif > ./images/optimized-movie-quakes-OK-med.gif")
+system("gifsicle -O3 --colors 64 --resize-width 600 /tmp/movie-quakes/movie-quakes-OK.gif > ./images/optimized-movie-quakes-OK-small.gif")
 
 
 # I give up...avconv does not like image piping
