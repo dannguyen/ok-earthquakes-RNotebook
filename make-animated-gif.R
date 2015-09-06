@@ -1,5 +1,6 @@
-# Note: This script is horseshit. Do not use it in its current state
-#       - Dan
+# Note: This script is a massive hack and requires a lot of non-R dependencies
+#   in order to run out of the box. It uses imagemagick to glue all the charts
+#   together and gifsicle to optimize the GIF.
 options(warn = -1)
 library(ggplot2)
 require(grid)
@@ -74,9 +75,9 @@ make_quake_map <- function(yrmth){
   this_data <- filter(cg_quakes, year_month == yrmth)
   my_map +
     geom_point(data = this_data, aes(longitude, latitude),
-                 size = 1.5,
+                 size = 1.3,
                  alpha = 0.25,
-                 shape = 4,
+                 shape = 1,
                  color = '#BB2222')  +
     coord_map("albers", lat0 = 38, latl = 42) +
     theme_dan_map() +
@@ -91,7 +92,7 @@ my_hist <- ggplot(cg_quakes, aes(factor(year_month))) +
 # LOLOL:
 make_quake_histogram <- function(yrmth){
   current_date <- ymd(paste(yrmth, '02', sep = '-'))
-  this_title <- strftime(current_date, "%Y\n%B")
+  this_title <- strftime(current_date, "  %Y\n  %B")
   # hardcoding this because I'm a weenie
   x_lbl_hjust = ifelse(yrmth > "2015", 1.0, 0.0)
   this_data <- filter(cg_quakes, year_month == yrmth)
@@ -101,18 +102,29 @@ make_quake_histogram <- function(yrmth){
     scale_y_continuous(breaks=c(100, 200), expand = c(0, 0), limits = c(0, 200)) +
     scale_x_discrete(breaks = c(yrmth), labels = c(this_title)) +
     scale_fill_manual(values = c("#FF6600", "grey")) +
-    annotate("text", x = "2005-01", y = 60, size = rel(1.5), hjust = 0,
-               label = c("Earthquakes of at least magnitude 3.0\nin the contiguous United States.\n\nChart by Dan Nguyen @dancow\nStanford Computational Journalism")
+    # annotate year marks
+    annotate("text", x = "2005-01", y = 5, size = rel(1.5), hjust = 0.0,
+               label = "2005", fontface = 'bold') +
+    annotate("text", x = "2010-01", y = 5, size = rel(1.5), hjust = 0.0,
+               label = "2010", fontface = 'bold') +
+    annotate("text", x = "2015-01", y = 5, size = rel(1.5), hjust = 0.0,
+               label = "2015", fontface = 'bold') +
+    annotate("text", x = yrmth, y = 25, size = rel(1.2), hjust = x_lbl_hjust,
+               label = this_title, lineheight = 0.8) +
+    # annotate chart text
+    annotate("text", x = "2005-01", y = 100, size = rel(1.5), hjust = 0,
+               label = c("Earthquakes of at least magnitude 3.0\nin the contiguous United States.\n\nData from the U.S. Geological Survey.\nChart by Dan Nguyen @dancow\nStanford Computational Journalism")
             ) +
-    annotate("text", x = "2013-01", y = 35, size = rel(1.5), hjust = 0,
+    annotate("text", x = "2013-03", y = 50, size = rel(1.5), hjust = 0,
                label = "Oklahoma's portion of earthquakes\nis colored in orange."
             ) +
-    theme(axis.text.x = element_text(color = "black", hjust = x_lbl_hjust ,
-              size = rel(0.4)),
-          legend.position="none",
+
+
+    theme( legend.position="none",
           axis.line = element_line(color = "#666666", size = 0.1),
           axis.line.x = element_line(color = "#666666", size = 0.1),
           axis.line.y = element_blank(),
+          axis.text.x = element_blank(),
           axis.text.y = element_text(size = rel(0.5), hjust = 0.0, color = "#666666"),
           panel.grid.major = element_line(size = 0.2, colour = "#555555",
             linetype = "dotted")
@@ -127,11 +139,11 @@ make_clips <- function(items){
   lapply(items, function(ym) {
     comp_name = paste("/tmp/movie-quakes/composite-", ym, '.png', sep = "")
     m_name <- paste("/tmp/movie-quakes/map-", ym, '.png', sep = "")
-    ggsave(m_name, height=3, width=5, plot = make_quake_map(ym), device = 'png',
+    ggsave(m_name, height=3, width=5, plot = make_quake_map(ym),
        bg="transparent")
     b_name <- paste("/tmp/movie-quakes/histogram-", ym, '.png', sep = "")
     ggsave(b_name, height=2, width=5, plot = make_quake_histogram(ym),
-      device = 'png', bg="transparent")
+      bg="transparent")
     print(as.character(ym))
     # Here's where I gave up on R. Good ol Bash and ImageMagick saves the day
     system(paste("convert -size 1500x1000 xc:white", comp_name))

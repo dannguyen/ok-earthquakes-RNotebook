@@ -503,34 +503,6 @@ ggmap(okcity_goog_map) +
 
 
 
-With Google maps:
-
-```{r}
-ok_goog_map <- get_googlemap(center = c(lon = -98.682862, lat = 35.517324),  size = c(500,500), zoom = 6, scale = 2, maptype = 'terrain',
-style = c(feature = "administrative.province", element = "labels", visibility = "off"))
-xqs <- filter(states_quakes, year >= 2010)
-
-ggmap(ok_goog_map, extent = 'panel') +
-    geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
-               fill = NA, color = "#552200", size = 0.5) +
-  geom_point(data = xqs, aes(x = longitude, y = latitude), color = "red", shape = 1) +
-#  geom_text(data = xqs, aes(label = year, x = -97.8, y = 39.0), size = rel(7.0), vjust = 1.0, color = "black", face = dan_base_font()) +
-
-#    annotate("text",  x = -97.8, y = 39.0, size = rel(4.0),
-#             label = ok_map$year, vjust = 1.0, fontface = 'bold',
-#             color = "red", hjust = 1.5) +
-  theme_dan_map() +
-  theme(
-#        strip.text = element_blank(),
-    strip.text = element_text(vjust = -5.2, size = rel(4.0)),
-    panel.margin = unit(c(-1,-1,-1,-1), 'lines')
-   ) +
-      facet_wrap(~ year, ncol = 3)
-
-
-```
-
-
 
 
 

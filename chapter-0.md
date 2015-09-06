@@ -16,7 +16,7 @@ __Quick summary__: A four-part walkthrough exploring earthquake data in Oklahoma
 
 The concepts of this walkthrough summed up in an animated GIF composed of charts created with ggplot2:
 
-![Animated GIF](/files/images/posts/ok-earthquakes/movie-quakes-OK.gif)
+![Animated GIF](/files/images/posts/ok-earthquakes/optimized-movie-quakes-OK.gif)
 
 
 <a id="chapter-summaries"></a>

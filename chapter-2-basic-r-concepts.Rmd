@@ -327,7 +327,7 @@ First, we inspect the column names of `us_map`'s _data_ to see which one corresp
 colnames(us_map@data)
 ```
 
-Both __NAME__ and __STUSPS__ (which I'm guessing stands for _U.S. Postal Code_) will work:
+Both __NAME__ and __STUSPS__ (which I'm guessing stands for _U.S. Postal Service_) will work:
 
 ```{r, message = FALSE, warning = FALSE}
 head(select(us_map@data, NAME, STUSPS))
@@ -764,7 +764,7 @@ ggplot() +
 In lieu of using shapefiles that contain geological features:
 
 ```{r, message = F, warning = F}
-goog_map <- get_googlemap(center = "Oklahoma",  size = c(500,500), zoom = 6, scale = 2, maptype = 'terrain')    
+goog_map <- get_googlemap(center = "Oklahoma",  size = c(500,500), zoom = 6, scale = 2, maptype = 'terrain')
 ```
 
 We use `ggmap()` to draw it as a plot:
@@ -777,8 +777,8 @@ Use [Google feature styles to remove administrative labels](https://developers.g
 
 
 ```{r, message = F, warning = F}
-goog_map2 <- get_googlemap(center = "Oklahoma",  size = c(500,500), 
-  zoom = 6, scale = 2, maptype = 'terrain', 
+goog_map2 <- get_googlemap(center = "Oklahoma",  size = c(500,500),
+  zoom = 6, scale = 2, maptype = 'terrain',
   style = c(feature = "administrative.province", element = "labels", visibility = "off"))
 # plot the map
 ggmap(goog_map2) + theme_dan_map()
@@ -799,8 +799,8 @@ With hexbin, note that we don't use Albers projection:
 
 ```{r, aug_2015_hybrid_goog_map_hexbin, message = F, warning = F}
 hybrid_goog_map <-  get_googlemap(center = "Oklahoma",  size = c(640,640), zoom = 6, scale = 2, maptype = 'hybrid',
-style = c(feature = "administrative.province", element = "labels", visibility = "off"))    
-  
+style = c(feature = "administrative.province", element = "labels", visibility = "off"))
+
 ggmap(hybrid_goog_map, extent = 'panel') +
   stat_binhex(data = states_quakes, aes(x = longitude, y = latitude), bins = 30, alpha = 0.3 ) +
   scale_fill_gradientn(colours=c("pink","red")) +
