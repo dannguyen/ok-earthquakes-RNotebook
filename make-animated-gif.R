@@ -92,7 +92,7 @@ my_hist <- ggplot(cg_quakes, aes(factor(year_month))) +
 # LOLOL:
 make_quake_histogram <- function(yrmth){
   current_date <- ymd(paste(yrmth, '02', sep = '-'))
-  this_title <- strftime(current_date, "  %Y\n  %B")
+  this_title <- strftime(current_date, "  %Y  \n  %B  ")
   # hardcoding this because I'm a weenie
   x_lbl_hjust = ifelse(yrmth > "2015", 1.0, 0.0)
   this_data <- filter(cg_quakes, year_month == yrmth)
@@ -109,7 +109,7 @@ make_quake_histogram <- function(yrmth){
                label = "2010", fontface = 'bold', family = "Gill Sans MT") +
     annotate("text", x = "2015-01", y = 6, size = rel(1.5), hjust = 0.0,
                label = "2015", fontface = 'bold', family = "Gill Sans MT") +
-    annotate("text", x = yrmth, y = 25, size = rel(1.2), hjust = x_lbl_hjust,
+    annotate("text", x = yrmth, y = 25, size = rel(1.3), hjust = x_lbl_hjust,
                label = this_title, lineheight = 0.8, family = "Gill Sans MT") +
     # annotate chart text
     annotate("text", x = "2005-01", y = 100, size = rel(1.5), hjust = 0, family = "Gill Sans MT",
