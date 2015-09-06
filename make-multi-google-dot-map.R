@@ -3,7 +3,14 @@ library(grid)
 library(dplyr)
 library(lubridate)
 library(rgdal)
+library(gridExtra)
 library(ggmap)
+# note: ggmap2.5.2.9000 must be loaded to allow the use of non-square Google Maps:
+# https://github.com/dkahle/ggmap/issues/17
+# If not on cran, install the devtools package and install via Github:
+# devtools::install_github("dkahle/ggmap")
+
+
 # load my themes:
 source("./myslimthemes.R")
 
