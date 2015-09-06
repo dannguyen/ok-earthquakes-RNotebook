@@ -65,103 +65,25 @@ sw_goog_map <- get_googlemap(center = c(lon = -99.007, lat = 35.38905),  size = 
                              scale = 2, maptype = 'terrain',
   style = c(feature = "administrative.province", element = "labels", visibility = "off"))
 
-#############################################
-# Visualize
-# Note: There has GOT to be an easier way to remove all padding/margin
-#  in a multi-row facet grid in which strip.text has a negative vjust.
-#  And I wish that whoever knows that way told me about 10 hours ago.
-#  Fortunately, the following hack I found on StackOverflow does the job:
-# http://stackoverflow.com/questions/15556068/removing-all-the-space-between-two-ggplots-combined-with-grid-arrange
 
-
-ggmap(sw_goog_map, extent = 'panel') +
+p <- ggmap(sw_goog_map, extent = 'panel') +
   #### outline Oklahoma
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
-               fill = NA, color = "#5522A2", size = 0.3) +
+               fill = NA, color = "#5d8048", size = 0.3) +
   geom_point(data = filter(sw_quakes),
                             aes(x = longitude, y = latitude),
                             size = 1.2, alpha = 0.8, color = "red", shape = 1) +
-
   #### make it pretty and grid it
   theme_dan_map() +
   labs(x=NULL, y=NULL) +
-  theme( strip.text = element_text(hjust = 0.11, vjust = -4.6, size = rel(1.1)),
+  theme( strip.text = element_text(hjust = 0.11, vjust = -4.2, size = rel(1.1)),
          panel.margin.x = unit(0, 'lines'),
          panel.margin.y = unit(-1.2, 'lines'),
-        plot.margin = unit(c(0, 0, 0, 0), 'lines')) +
+        plot.margin = unit(c(0, 0, 0, 0), 'in')) +
   facet_wrap(~ year, ncol = 4)
 
 
-ggsave(filename = "/tmp/multi-ok-quakes-goog-map.jpg",
-  plot = last_plot(),
-  scale = 1, width = 8, height = 8,
-  units = "in", dpi = 200, limitsize = F)
-
-
-
-
-
-
-
-
-## extraneous
-#     mytheme <- theme_minimal() + theme(
-#       axis.text.x = element_blank(),
-#       axis.text.y = element_blank(),
-#       axis.ticks = element_blank(),
-#       axis.title = element_blank(),
-#       panel.margin = unit(0, "lines"),
-#       panel.border = element_rect(colour = rgb(1.0, 0, 0, 0.5), fill=NA, size=1)
-#     )
-
-
-
-
-
-
-
-
-
-# #####
-
-# ggmap(sw_goog_map, extent = 'panel') +
-#   #### outline Oklahoma
-#   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
-#                fill = NA, color = "#552200", size = 0.5) +
-#   facet_wrap(~ year, ncol = 5)  +
-#   geom_point(data = filter(sw_quakes),
-#              aes(x = longitude, y = latitude), color = "red", shape = 1) +
-#   mytheme +
-#   theme(strip.text = element_blank(),
-#         panel.margin = unit(c(-0), 'lines'))
-
-
-
-
-
-######## attempt with grid.arrange
-
-
-# ### The map
-# the_maps <- ggmap(sw_goog_map, extent = 'panel') +
-#   #### outline Oklahoma
-#   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
-#                fill = NA, color = "#552200", size = 0.5) +
-#   #### make it pretty and grid it
-#   theme_dan_map() +
-#   theme( strip.text = element_text(vjust = -5.0, size = rel(3.0)),
-#          panel.margin = unit(0, 'lines')) +
-#   facet_wrap(~ year, ncol = 5)
-
-# ### Plot the earthquakes in red
-# ##### 2006 to 2010
-# p1 <- the_maps + geom_point(data = filter(sw_quakes, year <= 2010),
-#                   aes(x = longitude, y = latitude), color = "red", shape = 1) +
-#       theme(plot.margin=unit(c(1, 1, -2.5, 1), "lines"))
-# ##### 2011 to August 2015
-# p2 <- the_maps +
-#       geom_point(data = filter(sw_quakes, year >= 2011),
-#           aes(x = longitude, y = latitude), color = "red", shape = 1) +
-#       theme(plot.margin=unit(c(-2, 1, 1, 1), "lines"))
-# grid.arrange(p1, p2, ncol = 1)
-# # not quite...
+ggsave(filename = "./images/multi-year-OK-google-map.jpg",
+  plot = p,
+  scale = 1, width = 8, height = 3,
+  units = "in", dpi = 300, limitsize = F)

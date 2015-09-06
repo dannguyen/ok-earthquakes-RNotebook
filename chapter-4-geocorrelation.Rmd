@@ -502,21 +502,6 @@ ggmap(okcity_goog_map) +
 
 
 
---------------
-
-## Density map
-
-```{r}
-okqs <- filter(ok_quakes, year == 2010 | year == 2015)
-ggplot() +
-  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
-               fill = "white", color = "black") +
-  geom_point(data = okqs, aes(x = longitude, y = latitude)) +
-  #  stat_density2d(data = okqs, aes(x = longitude, y = latitude, fill = ..level..), geom = 'polygon') +
-  #coord_map("albers", lat0 = 38, latl = 42) +
-  theme_dan_map() +
-  facet_wrap(~ year)
-```
 
 With Google maps:
 
