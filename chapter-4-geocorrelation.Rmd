@@ -460,7 +460,7 @@ http://news.stanford.edu/news/2015/june/okla-quake-drilling-061815.html
 
 ```{r}
 library(ggmap)
-ok_goog_map <- get_googlemap(center = c(lon = -98.682862, lat = 35.517324),  size = c(500,500), zoom = 6, scale = 2, maptype = 'hybrid',
+ok_goog_map <- get_googlemap(center = c(lon = -99.007, lat = 35.38905),  size = c(450,250), zoom = 6, scale = 2, maptype = 'hybrid',
 style = c(feature = "administrative.province", element = "labels", visibility = "off"))
 ```
 
