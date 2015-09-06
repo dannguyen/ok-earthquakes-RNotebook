@@ -540,3 +540,11 @@ ggmap(ok_goog_map, extent = 'panel') +
 
 
 
+Reference to disposal wells in OK gov:
+
+http://earthquakes.ok.gov/what-we-know/earthquake-map/
+
+
+On April 21, earthquakes.ok.gov was launched:
+
+http://earthquakes.ok.gov/news/

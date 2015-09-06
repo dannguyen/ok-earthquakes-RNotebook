@@ -4,6 +4,9 @@ status: unfinished
 description: "A technical walkthrough of how to research, analyze, and visualize Oklahoma's earthquakes using R."
 ---
 
+![OK google](/files/images/posts/ok-earthquakes/multi-year-OK-google-map-borderless.jpg)
+
+
 __Quick summary__: A four-part walkthrough exploring earthquake data in Oklahoma using R.
 - [The repo containing the notebooks, code, and data](https://github.com/dannguyen/ok-earthquakes-RNotebook)
 - [The repo in a zip file](https://github.com/dannguyen/ok-earthquakes-RNotebook/archive/master.zip).

@@ -10,7 +10,6 @@ library(ggmap)
 # If not on cran, install the devtools package and install via Github:
 # devtools::install_github("dkahle/ggmap")
 
-
 # load my themes:
 source("./myslimthemes.R")
 
@@ -83,7 +82,12 @@ p <- ggmap(sw_goog_map, extent = 'panel') +
   facet_wrap(~ year, ncol = 4)
 
 
+fname = "./images/multi-year-OK-google-map.jpg"
 ggsave(filename = "./images/multi-year-OK-google-map.jpg",
   plot = p,
   scale = 1, width = 8, height = 3,
   units = "in", dpi = 300, limitsize = F)
+
+bname = "./images/multi-year-OK-google-map-borderless.jpg"
+# Punt to imagemagick to trim the whitespace
+system(paste('convert -trim', fname, bname))
