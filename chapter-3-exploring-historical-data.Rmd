@@ -9,10 +9,9 @@ title: "Chapter 3: Exploring the Historical Data"
 
 Questions to ask:
 
-- Does Oklahoma have a lot of earthquakes compared to other states?
-- Is the earthquake activity recent?
-- Is Oklahoma unusual in the spike of earthquakes that it faces, compared to other states?
-- How unusual is the intensity of the earthquakes?
+- What has Oklahoma's earthquake activity been _historically_?
+- Just how significant is the recent swarm of earthquakes compared to the rest of Oklahoma's history?
+- Are there any other states experiencing an upswing in earthquake activity?
 
 
 
@@ -70,7 +69,7 @@ We won't be mapping Alaska but including it is critical for analysis.
 TK explanation.
 
 
-```{r, message = F}
+```{r, message = F, warning = F}
 fn <- './data/usgs-quakes-dump.csv'
 zname <- paste(fn, 'zip', sep = '.')
 if (!file.exists(zname) || file.size(zname) < 2048){
@@ -84,20 +83,30 @@ if (!file.exists(zname) || file.size(zname) < 2048){
 unzip(zname, exdir="data")
 # read the data into a dataframe
 usgs_data <- read.csv(fn, stringsAsFactors = FALSE)
+```
+
+The number of records in this historical data set:
+
+```{r}
 nrow(usgs_data)
 ```
 
 
 
-Add some convenience columns; use lubridate to add a `year` and `era` column:
+
+Add some convenience columns. The `date` column can be derived with the standard `as.Date()` function. We use lubridate to convert the `time` column to a proper R time object, and then derive a `year` and `era` column:
 
 
 ```{r, message = F}
-
-usgs_data <- mutate(usgs_data, time = as.Date(time), year = year(time)) %>%
-          mutate(era = ifelse(year <= 2000, "1995-2000",
-          ifelse(year <= 2005, "2001-2005",
-          ifelse(year <= 2010, "2006-2010", "2011-2015"))))
+# I know this could be done in one/two mutate() calls...but sometimes
+#  that causes RStudio to crash, due to the size of the dataset...
+usgs_data <- usgs_data %>%
+                mutate(time = ymd_hms(time)) %>%
+                mutate(date = as.Date(time)) %>%
+                mutate(year = year(time)) %>%
+                mutate(era = ifelse(year <= 2000, "1995-2000",
+                  ifelse(year <= 2005, "2001-2005",
+                  ifelse(year <= 2010, "2006-2010", "2011-2015"))))
 ```
 
 
@@ -106,8 +115,15 @@ Remove all non-earthquakes and events with magnitude less than 3.0:
 ```{r, message = F}
 quakes <- usgs_data %>% filter(mag >= 3.0) %>%
   filter(type == 'earthquake')
+```
+
+This leaves us with this about half as many records:
+
+```{r}
 nrow(quakes)
 ```
+
+
 
 
 ```{r, message = F}
@@ -121,7 +137,6 @@ sp_quakes@proj4string <- states_map@proj4string
 xdf <- over(sp_quakes, states_map[, 'STUSPS'])
 world_quakes <- cbind(sp_quakes, xdf)
 states_quakes <- world_quakes %>% filter(!is.na(STUSPS))
-nrow(states_quakes)
 ```
 
 
@@ -132,113 +147,104 @@ Add a `is_OK` convenience column to `states_quakes`:
 states_quakes$is_OK <- states_quakes$STUSPS == "OK"
 ```
 
+## Let's make some (simple) maps
 
+For mapping purposes, we'll make a contiguous-states-only map, which again, I'm doing because I haven't quite figured out how to project Alaska and Hawaii and their earthquakes in a practical way. So in these next few contiguous-states-only mapping exercise, we lose two of the most relatively active states. For now, that's an acceptable simplification; remember that in the previous chapter, we saw how Oklahoma's recent earthquake activity outpaced all of the U.S., including Alaska and Hawaii.
 
-
-------
-
-Let's circle back and see the overall scope.
-
-Look at breakdown of earthquakes worldwide versus United States:
-
-Total
-
-```{r, histogram_all_earthquakes, warning = F, message = F}
-ggplot(data = world_quakes, aes(x = year)) +
-  geom_histogram(binwidth = 1)
-```
-
-
-U.S. vs Non US:
-
-```{r, histogram_us_vs_non_us_earthquakes_only, warning = F, message = F}
-ggplot(data = world_quakes, aes(x = year, fill = is.na(STUSPS))) +
-  geom_histogram(binwidth = 1) +
-  scale_fill_manual(values = c("red", "gray"), labels = c("Within U.S.", "Outside U.S.")) +
-  guides(fill = guide_legend(reverse = TRUE))
-```
-
-
-U.S. earthquakes only
-
-```{r, histogram_us_earthquakes_only, message = F}
-ggplot(data = states_quakes, aes(x = year)) +
-  geom_histogram(binwidth = 1) +
-  scale_y_continuous(expand = c(0, 0))
-```
-
-
------------
-
-Plot a histogram of all of the earthquakes by state since 1995, and highlight Oklahoma in orange:
-
-
-```{r, histogram_states_earthquakes_since_1995, message = F}
-ggplot(states_quakes, aes(STUSPS)) +
-   geom_histogram(binwidth = 1, width = 0.5) +
-   geom_histogram(data = filter(states_quakes, is_OK), binwidth = 1, fill="#FF6600", width = 0.5) +
-   scale_y_continuous(expand = c(0, 0)) +
-   theme(axis.text.x = element_text(angle = 90, vjust = 0.6)) +
-   ggtitle("U.S. M3.0+ earthquakes since 1995, grouped by state")
-```
-
-Reduce the noise by filtering out states. Only a few states have a significant number of earthquakes.
-
-Order the x-axis by count: http://stackoverflow.com/questions/20041136/how-to-avoid-ggplot-sorting-the-x-axis-while-plotting-geom-bar
-
-
-```{r, sorted_states_top_earthquakes, message = F}
-# Apparently there's a reorder() convention...rather than look that up, I've just decided to set the factor manually
-qcounts <- states_quakes %>% group_by(STUSPS) %>% summarise(count = n()) %>%
-    arrange(desc(count))
-# create a vector
-qcounts$x1 <- factor(qcounts$STUSPS, levels = qcounts$STUSPS)
-ggplot(qcounts, aes(x1, count)) +
-  scale_y_continuous(expand = c(0, 0)) +
-  geom_bar(width = 0.5, stat = "identity") +
-  geom_bar(data = filter(qcounts, STUSPS == "OK"), stat = "identity", fill = "#FF6600", width = 0.5) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.6)) +
-  ggtitle("U.S. M3.0+ earthquakes since 1995\ngrouped and sorted by states with most earthquake activity")
-
-```
-
-Pick top 12:
-
-```{r, message = F}
-top_states <- head(qcounts, 12)$STUSPS
-top_quakes <- filter(states_quakes, states_quakes$STUSPS %in% top_states)
+```{r, warning = F, message = F}
+cg_map <- states_map[!states_map$STUSPS %in% c('AK', 'HI'), ]
+cg_quakes <- states_quakes[!states_quakes$STUSPS  %in% c('AK', 'HI'), ]
 ```
 
 
 
+Trying to map all the quakes leads to the unavoidable problem of overplotting:
 
-Plot a histogram of the earthquakes by state, before and after 2010:
+```{r, earthquakes_by_era_since_1995_overplotted, warning = F, message = F}
+ggplot() +
+  geom_polygon(data = cg_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
+  geom_point(data = cg_quakes, aes(x = longitude, y = latitude), shape = 1, color = "red", alpha = 0.2) +
+  coord_map("albers", lat0 = 38, latl = 42) +
+  theme_dan_map() +
+  ggtitle("M3.0+ earthquakes in U.S. since 1995")
+
+```
+
+So we want to break it down by __era__:
 
 
-```{r, message = F}
-top_quakes$x1 <- factor(top_quakes$STUSPS, levels = top_states)
-ggplot(top_quakes, aes(x = x1, fill = year < 2010)) +
-  geom_histogram(binwidth = 1) +
-  scale_fill_manual(values = c("#990000", "#DDCCCC"), labels = c("2010-2015", "1995-2010"), guide = guide_legend(reverse = TRUE)) +
- theme(axis.text.x = element_text(
-   face = ifelse(levels(top_quakes$x1) =="OK","bold","plain"),
-   color = ifelse(levels(top_quakes$x1) =="OK","#FF6600","#444444"))
-  ) +
-  scale_y_continuous(expand = c(0, 0)) +
-  ggtitle("Earthquakes (3.0+ mag) among top 12 U.S. states\nby overall earthquake activity.")
+By era:
+
+Legend hack: http://stackoverflow.com/questions/5290003/how-to-set-legend-alpha-with-ggplot2
+
+```{r, earthquakes_by_era_since_1995_plotted_by_era, warning = F, message = F}
+ggplot() +
+  geom_polygon(data = cg_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
+  geom_point(data = cg_quakes, aes(x = longitude, y = latitude, color = era), shape = 1,  alpha = 0.2) +
+  coord_map("albers", lat0 = 38, latl = 42) +
+  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
+  scale_colour_brewer(type = "qual", palette = "Accent") +
+  theme_dan_map() +
+  ggtitle("M3.0+ earthquakes in U.S. since 1995")
+
+```
+
+### Small multiples
+
+Again, we still have overplotting so break up the map into small multiples
+
+```{r, small_multiples_earthquakes_by_era_since_1995, warning = F, message = F}
+ggplot() +
+  geom_polygon(data = cg_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
+  geom_point(data = cg_quakes, aes(x = longitude, y = latitude), shape = 4,  alpha = 0.2, color = "red") +
+  coord_map("albers", lat0 = 38, latl = 42) +
+  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
+  theme_dan_map() +
+  facet_wrap(~ era) +
+  ggtitle("M3.0+ earthquakes in U.S. by time period")
+```
+
+### Small multiples on Oklahoma
+
+There's definitely an uptick in Oklahoma, but there's so much noise from the nationwide map that it's prudent to focus our attention to _only_ Oklahoma for now:
+
+
+Small multiples focused on Oklahoma:
+
+```{r, small_multiples_OK_only, warning = F, message = F}
+# Dataframe of just Oklahoma quakes:
+ok_quakes <- filter(states_quakes, is_OK)
+# map of just Oklahoma state:
+ok_map <- states_map[states_map$STUSPS == 'OK',]
+```
+
+Mapping earthquakes by era, for Oklahoma:
+
+```{r, small_multiples_oklahoma_map_quakes, fig.cap = "Small Multiples Oklahoma"}
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
+  geom_point(data = ok_quakes, aes(x = longitude, y = latitude), shape = 4,  alpha = 0.5, color = "red") +
+  coord_map("albers", lat0 = 38, latl = 42) +
+  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
+  theme_dan_map() +
+  facet_wrap(~ era) +
+  ggtitle("M3.0+ earthquakes in Oklahoma by time period")
 ```
 
 
-This graph is a little visually misleading, because the `1995-2010` category spans __15 years__, versus the __5__ years for `2010-2015`. But that only underscores the unusual frequency of Oklahoma's recent earthquakes.
-
-
-
-
-
-
-
+## Broadening things: Let's not make a map
 
 ## Within comparisons: OK year over year
+
+
+It's pretty clear that Oklahoma has a jump in earthquakes from 2011 to 2015.
+
+But there's no need to use a map for that.
+
+TK histogram
+
+
+### Look at Oklahoma, year to year
 
 Let's focus our look at just Oklahoma:
 
@@ -258,6 +264,11 @@ ggplot(data = ok_quakes, aes(year)) +
   ggtitle("Oklahoma M3+ earthquakes, from 1995 to August 2015")
 ```
 
+Let's be more specific: by month
+
+
+<a id="mark-ok_1995_to_aug_2015_by_month"></a>
+
 Oklahoma earthquakes by month, since 2008
 
 ```{r, ok_1995_to_aug_2015_by_month, warning = F, message = F}
@@ -265,38 +276,302 @@ Oklahoma earthquakes by month, since 2008
 # continuous scale from month-date and applying it to stat_bin for a more
 # attractive graph
 mbreaks = as.numeric(seq(as.Date('2008-01-01'), as.Date('2015-08-01'), '1 month'))
-ggplot(data = filter(ok_quakes, year >= 2008),
-       aes(x = floor_date(time, 'month')), y = ..count..) +
+ok_1995_to_aug_2015_by_month <- ggplot(data = filter(ok_quakes, year >= 2008),
+       aes(x = floor_date(date, 'month')), y = ..count..) +
   stat_bin(breaks = mbreaks, position = "identity") +
-  stat_bin(data = filter(ok_quakes, floor_date(time, 'month') == as.Date('2011-11-01')),
+  stat_bin(data = filter(ok_quakes, floor_date(date, 'month') == as.Date('2011-11-01')),
           breaks = mbreaks, position = 'identity', fill = 'red') +
   scale_x_date(breaks = date_breaks("year"), labels = date_format("%Y")) +
   scale_y_continuous(expand = c(0, 0)) +
-  annotate(geom = "text", x = as.Date("2011-11-01"), y = 50, size = rel(3.5), vjust = 0.0, color = "#DD6600",
-           label = "November 2011\nRecord M5.6 earthquake hits Oklahoma") +
+  annotate(geom = "text", x = as.Date("2011-11-01"), y = 50, size = rel(4.5), vjust = 0.0, color = "#DD6600", family = "Gill Sans MT",
+           label = "November 2011, 10:53 PM\nRecord M5.6 earthquake near Prague, Okla.") +
   ggtitle("Oklahoma M3+ earthquakes since 2008, by month")
+# plot the chart
+ok_1995_to_aug_2015_by_month
 ```
 
-Focus on November 2011:
+Let's go even more specific:
 
-```{r, ok_earthquakes_nov_2011,warning = F, message = F}
-ggplot(data = filter(ok_quakes, year == 2011, month(time) == 11),
-       aes(x = floor_date(time, 'day'))) +
+
+Focus on November 2011. I'll also convert the `time` column to Central Time for these examples:
+
+
+```{r}
+nov_2011_quakes <- nov_2011_quakes %>%
+  mutate(time = with_tz(time, 'America/Chicago')) %>%
+  filter(year == 2011, month(date) == 11)
+```
+
+
+```{r, ok_earthquakes_nov_2011 ,warning = F, message = F}
+ggplot(data = nov_2011_quakes,
+       aes(x = floor_date(date, 'day'))) +
   geom_histogram(binwidth = 1, color = "white") +
   scale_x_date(breaks = date_breaks('week'),
                labels = date_format("%b. %d"),
                expand = c(0, 0),
                limits = c(as.Date("2011-11-01"), as.Date("2011-11-30"))) +
   scale_y_continuous(expand = c(0, 0)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.8)) + 
   ggtitle("Oklahoma M3+ earthquakes during the month of November 2011")
 ```
 
 
+We see that a majority of earthquakes happened on November 6, the day after the [5.6M quake in Prague on November 5th, 10:53 PM](https://en.wikipedia.org/wiki/2011_Oklahoma_earthquake). Let's filter the dataset for the first week of November 2011 for a closer look at the timeframe:
+
+```{r,warning = F, message = F}
+firstweek_nov_2011_quakes <- nov_2011_quakes %>%
+             filter(date >= "2011-11-01", date <= "2011-11-07")
+# calculate the percentage of first week quakes in November
+nrow(firstweek_nov_2011_quakes) / nrow(nov_2011_quakes) 
+```
+
+Graph by time and magnitude:
+
+```{r,warning = F, message = F}
+
+big_q_time <- ymd_hms("2011-11-05 22:53:00", tz = "America/Chicago")
+ggplot(data = firstweek_nov_2011_quakes, aes(x = time, y = mag)) + 
+  geom_vline(xintercept = as.numeric(big_q_time), color = "red", linetype = "dashed") + 
+  geom_point() +
+  scale_x_datetime(breaks = date_breaks('12 hours'), labels = date_format('%b %d\n%H:%M'), 
+                   expand = c(0, 0),
+                   limits = c(ymd_hms("2011-11-03 00:00:00"), ymd_hms("2011-11-08 00:00:00"))) + 
+  ylab("Magnitude") +
+  ggtitle("M3.0+ earthquakes in Oklahoma, first week of November 2011") +
+  annotate("text", x = big_q_time, y = 5.6, hjust = -0.1, size = 4,
+           label = "M5.6 earthquake near Prague\n10:53 PM on Nov. 5, 2011", family = "Gill Sans MT") + 
+  theme(panel.grid.major.x = element_line(linetype = 'dotted', color = 'black'),
+        axis.title = element_text(color = "black"), axis.title.x = element_blank()) 
+
+```
 
 
---------------
 
-## TKTK Something Small Multiples
+As [we saw in the previous chart](#mark-ok_1995_to_aug_2015_by_month), things quieted down after November 2011, up until mid-2013. So, again, it's _possible_ that maybe the general rise of Oklahoma earthquakes is due to a bunch of newer/better seismic sensors since 2013. However, this is only a possiblity if we were doing our analysis in a vaccum divorced from reality. Practically speaking, the USGS likely does not go on a state-specific sensor-installation spree, within a period of two years, in such a way that massively distorts the count of M3.0+ earthquakes. However, in the next section, we'll step back and see how unusual Oklahoma's spike in activity is compared to every other U.S. state.
+
+But as a sidenote, the big M5.6 earthquake in November 2011, followed by a period of relative inactivity (at least compared to 2014) does not, on the face of it, support a theory of man-made earthquakes. After all, unless drilling operations just stopped in 2011, we might expect a general uptick in earthquakes through 2012 and 2013. But remember that we're dealing with a very simplified subset of the earthquake data; in [chapter 4](#chapter-4-mark), we address this "quiet" period in greater detail.
+
+
+
+
+## Where does Oklahoma figure among states?
+
+We've shown that Oklahoma is most definitely experiencing an unprecedented (at least since 1995) number of earthquakes. So the next logical question to ask is: __is the entire world experiencing an uptick in earthquakes?__. Because if the answer is "yes", then that would make it harder to prove that what Oklahoma is experiencing is man-made.
+
+
+### Earthquakes worldwide
+
+First step is to do a histogram by year of the `world_quakes` data frame. In the figure below, I've emphasized years 2011 to 2015:
+
+```{r, histogram_all_earthquakes, warning = F, message = F}
+ggplot(data = world_quakes, aes(x = year, alpha = year >= 2011)) +
+  geom_histogram(binwidth = 1) +
+  scale_alpha_discrete(range = c(0.5, 1.0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  guides(alpha = FALSE) + 
+  ggtitle("M3.0+ earthquakes worldwide by year from 1995 to August 2015")
+```
+
+At a glance, it doesn't appear that the world is facing a post-2011 surge, at least compared compared to what it's seen in 2005 to 2007. I'll leave it to you to [research those years in seismic history](https://en.wikipedia.org/wiki/2005_Kashmir_earthquake). In any case, I'd argue that trying to quantify a worldwide trend for M3.0+ earthquakes might be futile. To reiterate what the [USGS "Earthquake Facts and Statistics" page says](http://earthquake.usgs.gov/earthquakes/eqarchives/year/eqstats.php), its earthquake records are based on its sensor network, and that network doesn't provide a uniform level of coverage worldwide:
+
+> The USGS estimates that __several million earthquakes occur in the world each year__. Many go undetected because they hit remote areas or have very small magnitudes. The NEIC now locates about __50 earthquakes each day, or about 20,000 a year__. As more and more seismographs are installed in the world, more earthquakes can be and have been located. However, the number of large earthquakes (magnitude 6.0 and greater) has stayed relatively constant.
+
+### USGS records for the U.S. compared to the world
+
+Let's take a detour into a bit of trivia: let's assume (and this is obviously an incredibly naive assumption when it comes to Earth's geological composition) that earthquakes occur uniformly across the Earth's surface. How many earthquakes would we expect to be within the U.S.'s borders?
+
+The U.S. land mass is roughly [9.1 million square km](https://en.wikipedia.org/wiki/United_States). The world's surface area is roughly [510,000,000 square km](https://en.wikipedia.org/wiki/Earth):
+
+```{r}
+9.1 / 510
+```
+
+The percentage of U.S.-bounded earthquakes in our dataset can be calculated thusly:
+
+```{r}
+nrow(states_quakes) / nrow(world_quakes)
+```
+
+Again, it is basically just _wrong_ to assume that earthquake activity can be averaged across all of Earth's surface area. But I don't think it's far off to assume that the USGS has more comprehensive coverage within the United States.
+
+
+Let's look at the histogram of `world_quakes`, with a breakdown between U.S. and non-U.S. earthquakes:
+
+U.S. vs Non US:
+
+```{r, histogram_us_vs_non_us_earthquakes_only, warning = F, message = F}
+#p_alpha <- ifelse(world_quakes$year >= 2011, 1.0, 0.1)
+ggplot(data = world_quakes, aes(x = year, fill = is.na(STUSPS))) +
+  geom_histogram(binwidth = 1, aes(alpha = year >= 2011)) +
+  scale_fill_manual(values = c("darkblue", "gray"), labels = c("Within U.S.", "Outside U.S.")) +
+  scale_alpha_discrete(range = c(0.5, 1.0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  guides(fill = guide_legend(reverse = TRUE), alpha = FALSE) +
+  ggtitle(expression(
+    atop("M3.0+ earthquakes worldwide, 1995 to August 2015", 
+         atop("U.S. versus world")),
+    ))
+
+```
+
+With U.S. making up only 5% of the data, it's too difficult to visually discern a trend. So let's just focus on the `states_quakes` data frame.
+
+
+### U.S. earthquakes only
+
+
+Let's make a histogram of U.S. earthquakes only:
+
+```{r, histogram_us_earthquakes_annually_only, message = F}
+ggplot(data = states_quakes, aes(x = year, alpha = year >= 2011)) +
+  geom_histogram(binwidth = 1, fill = "darkblue") +
+  scale_alpha_discrete(range = c(0.5, 1.0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  ggtitle("M3.0+ U.S. earthquakes by year, 1995 to August 2015")
+```
+
+The year-sized "buckets" may make it difficult to see the trend, so let's move to a monthly histogram. 
+
+
+In a subsequent example, I want to use __geom_smooth()__ to show a trendline. I know there's probably a way to do the following aggregation within __stat_bin()__, but I don't know it. So I'll just make a data frame that aggregates the `states_quakes` data frame by month.
+
+```{r, message = F}
+states_quakes_by_month <- states_quakes %>%
+  mutate(year_month = strftime(date, '%Y-%m')) %>%
+  group_by(year_month) %>%
+  summarise(count = n())
+
+# I'm only doing this to add prettier labels to the next chart...I'm sure
+# there's a more conventional way to do this if only I better understood
+# stat_bin...oh well, I need lapply practice...
+c_breaks = lapply(seq(1995, 2015, 2), function(y){ paste(y, "01", sep = '-')})
+c_labels = seq(1995, 2015, 2)
+```
+
+
+The monthly histogram without a trendline (note that I use __geom_bar()__ instead of __geom_histogram()__, since `states_quakes_by_month` already has a `count` aggregation:
+
+```{r, histogram_us_earthquakes_monthly_no_trendline, message = F}
+ggplot(data = states_quakes_by_month, 
+       aes(x = year_month, y = count, alpha = year_month >= "2011")) +
+  geom_bar(stat = 'identity', fill = "lightblue") +
+  scale_alpha_discrete(range = c(0.5, 1.0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_x_discrete(breaks = c_breaks, labels = c_labels) +
+  ggtitle("M3.0+ U.S. earthquakes by month, 1995 to August 2015")
+```
+
+__Note:__ If you're curious why there's a spike in 2002, I direct you to the Wikipedia entry for the [2002 Denali earthquake](https://en.wikipedia.org/wiki/2002_Denali_earthquake).
+
+
+<a id="histogram_us_earthquakes_monthly_trendline-mark"></a>
+
+Let's apply a trendline to see the increase more clearly:
+
+
+```{r, histogram_us_earthquakes_monthly_trendline, message = F}
+ggplot(data = states_quakes_by_month, 
+       aes(x = year_month, y = count, group = 1, alpha = year_month >= "2011")) +
+  geom_bar(stat = 'identity', fill = "lightblue") +
+  geom_smooth(color = "#990000", fill = 'yellow') +
+  scale_alpha_discrete(range = c(0.6, 1.0)) +
+  scale_x_discrete(breaks = c_breaks, labels = c_labels) +
+  scale_y_continuous(expand = c(0, 0)) +
+  ggtitle("Trend of M3.0+ U.S. earthquakes by month, 1995 to August 2015")
+```
+
+And to see the slope of the trendline more clearly, let's use [__coord_cartesian()__](http://docs.ggplot2.org/current/coord_cartesian.html) to cut the y-axis off at 400 (since only [November 2002](https://en.wikipedia.org/wiki/2002_Denali_earthquake) exceeds that mark, which skews the visual scale)
+
+```{r, histogram_us_earthquakes_monthly_trendline_400_cutoff, message = F}
+ggplot(data = states_quakes_by_month, 
+       aes(x = year_month, y = count, group = 1, alpha = year_month >= "2011")) +
+  geom_bar(stat = 'identity', fill = "lightblue") +
+  geom_smooth(color = "#990000", fill = 'yellow') +
+  scale_alpha_discrete(range = c(0.6, 1.0)) +
+  scale_x_discrete(breaks = c_breaks, labels = c_labels) +
+  scale_y_continuous(expand = c(0, 0)) +
+  coord_cartesian(ylim = c(0, 400)) + 
+  ggtitle("Trend of M3.0+ U.S. earthquakes by month, 1995 to August 2015")
+```
+  
+
+
+It appears that the _entire_ U.S. has experienced an uptick in earthquakes since 2011. This does not bode well for our hypothesis that Oklahoma's surge is man-made, unless we can easily show that drilling activity across the United States has _also_ uniformly increased. Of course, that's not the way drilling for gas and oil works: only certain states are energy-rich enough to have substantial drilling activity.
+
+So now we need to dig deeper into the numbers. Just as doing a histogram by year obscured the trend in earthquake activity, counting earthquakes at the national level obscures the localized characteristics of earthquakes. 
+
+Let's go back to counting earthquakes within Oklahoma's borders, but now we'll apply the earthquake counting to all the other states.
+
+
+## Earthquakes by state
+
+For now, let's ignore the time element of the earthquakes and just do a breakdown of `state_quakes` by __state__. Below, the histogram highlights Oklahoma in __orange__:
+
+```{r, histogram_states_earthquakes_since_1995, message = F}
+ggplot(states_quakes, aes(STUSPS)) +
+   geom_histogram(binwidth = 1, width = 0.5) +
+   geom_histogram(data = filter(states_quakes, is_OK), binwidth = 1, fill="#FF6600", width = 0.5) +
+   scale_y_continuous(expand = c(0, 0)) +
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.6)) +
+   ggtitle("U.S. M3.0+ earthquakes from 1995 to August 2015, grouped by state")
+```
+
+Let's re-order that histogram so that states are listed by number of earthquakes rather than in alphabetical order:
+
+([This StackOverflow question was very helpful](http://stackoverflow.com/questions/20041136/how-to-avoid-ggplot-sorting-the-x-axis-while-plotting-geom-bar))
+
+
+```{r, sorted_states_top_earthquakes, message = F}
+# Apparently there's a reorder() convention...rather than look that up, I've just decided to set the factor manually
+qcounts <- states_quakes %>% group_by(STUSPS) %>% summarise(count = n()) %>%
+    arrange(desc(count))
+# create a vector
+qcounts$st_order <- factor(qcounts$STUSPS, levels = qcounts$STUSPS)
+ggplot(qcounts, aes(st_order, count)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  geom_bar(width = 0.5, stat = "identity") +
+  geom_bar(data = filter(qcounts, STUSPS == "OK"), stat = "identity", fill = "#FF6600", width = 0.5) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.6)) +
+  ggtitle("M3.0+ earthquakes by state from 1995 to August 2015")
+
+```
+
+Only a few states have had a significant number of earthquakes. So let's just pick the top 12 for further analysis:
+
+```{r, message = F}
+top_states <- head(qcounts, 12)$STUSPS
+top_quakes <- filter(states_quakes, states_quakes$STUSPS %in% top_states)
+```
+
+
+### Earthquakes by state, before and after 2011
+
+We already know that the vast majority of Oklahoma's earthquakes are post-2011. But is this the case for the other states? Let's bring back the time element of these earthquakes and split the histogram into two time periods: 
+
+- 1995 through 2010
+- 2011 through August 2015
+
+```{r, earthquakes_top_12_states_2011_break, message = F}
+top_quakes$st_order <- factor(top_quakes$STUSPS, levels = top_states)
+ggplot(top_quakes, aes(x = st_order, fill = year < 2011)) +
+  geom_histogram(binwidth = 1) +
+  scale_fill_manual(values = c("#990000", "#DDCCCC"), labels = c("2011 - Aug. 2015", "1995 - 2010"), guide = guide_legend(reverse = TRUE)) +
+ theme(axis.text.x = element_text(
+   face = ifelse(levels(top_quakes$st_order) =="OK","bold","plain"),
+   color = ifelse(levels(top_quakes$st_order) =="OK","#FF6600","#444444"))
+  ) +
+  scale_y_continuous(expand = c(0, 0)) +
+  ggtitle("Earthquakes (3.0+ mag) among top 12 U.S. states\nby overall earthquake activity.")
+```
+
+Note that this graph is a bit visually misleading: the `1995-2010` category spans __6 years__, versus the __4+__ years for `2011 - Aug. 2015`. But that only __underscores__ the unusual frequency of Oklahoma's recent earthquakes.
+
+While Oklahoma's total number of M3.0+ earthquakes since 1995 is significantly fewer than Alaska's and California's, it is clearly making up for lost time in the past 4 years. Virtually all of Oklahoma's earthquakes are in the 2011+ period, and it surpasses California by a wide margin when just looking at 2011+ quakes.
+
+### Earthquakes by year and by state
+
+Let's get a more specific breakdown of earthquake activity by state. Instead of dividing the histogram into two unequal eras, we'll use small multiples to show the annual activity per state. In the following examples, I create the `top_quakes_ge_2005` data frame to store earthquakes from 2005 on, as the visualization gets too cluttered if we include earthquakes since 1995:
 
 
 ```{r, earthquake_activity_top_states_by_year, message = F}
@@ -309,12 +584,15 @@ g <- ggplot(top_quakes_ge_2005, aes(factor(year))) +
   scale_x_discrete(breaks = c(2006, 2010, 2014)) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, 600))
 g + facet_wrap(~ STUSPS, ncol = 4) + theme(panel.margin = unit(c(1, 1, 1, 1), "lines")) +
-  ggtitle("Annual number of M3.0+ earthquakes for\nU.S. states with most earthquake activity")
+  ggtitle("U.S. M3.0+ earthquakes by year and by state.")
 ```
 
+While Alaska had a peak in 2014, notice that it's not a huge deviation from prior years. Oklahoma's 2014, by contrast, is quite a few deviations from its median earthquake activity since 2005.
 
 
-## TKTK pie breakdown
+### Small multi-pies of earthquakes by year and by state
+
+While I agree with [Edward Tufte that pie charts are generally a bad idea](http://www.edwardtufte.com/bboard/q-and-a-fetch-msg?msg_id=00018S), pies actually works quite well in this specific situation because of just how dramatic Oklahoma's earthquake activity has been. Below, I include the earthquake data since 1995 and break the time periods into equal divisions via the `era` column:
 
 ```{r, earthquake_activity_pie_era,  message = F}
 
@@ -333,25 +611,36 @@ mygrid <- ggplot(pct_quakes, aes(x = factor(1), y = pct, fill = era)) +
            width = 1, stat = "identity", size = 0.2 , aes(order = desc(era))) +
   coord_polar(theta = "y") +
   facet_wrap(~ STUSPS, ncol = 4) +
-  ggtitle("Earthquakes by time period for U.S. states\nwith most overall earthquake activity")
+  ggtitle("M3.0+ earthquakes by time period and by U.S. state,\n1995 to August 2015")
 
 mygrid + theme_dan_map()
-
 ```
 
-
-
-
-
-
-
-----
-
+Again, Oklahoma is a clear outlier in its activity. Also worth noting is how __Texas__ comes in second when it comes to proportion of earthquakes in 2011 to 2015. This shouldn't be surprising, as Texas is facing its own surge, albeit one that is currently smaller than Oklahoma's. That [surge has also been linked to drilling activities](https://stateimpact.npr.org/texas/tag/earthquake/).
 
 
 ## Nationwide quakes versus Oklahoma
 
-Stacked charts
+So what we've shown so far is that not only has Oklahoma faced a post-2011 surge in earthquakes, its surge is unlike any other state. This helps address the counter-hypothesis that maybe Oklahoma is only seeing increased earthquake activity because the entire United States has increased activity. Even if there really were such a nationwide uptick, the sheer magnitude of Oklahoma's increase allows for something special happening within Oklahoma's borders.
+
+But before moving on, let's answer the question of: __is there really an uptick of earthquake activity within the United States__?
+
+Since Oklahoma's uptick has been so dramatic, it's quite possible that the _national_ uptick is purely composed of _Oklahoma's_ uptick. Let's make a histogram, faceted on "Oklahoma" and "non-Oklahoma":
+
+```{r, ok_vs_us_combined_from_1995_by_year, message = F}
+ggplot(states_quakes, aes(x = factor(year))) +
+  geom_histogram(aes(fill = !is_OK), binwidth = 1) +
+  scale_fill_manual(values = c("#FF6600", "lightblue"),
+                    labels = c('Oklahoma', 'All other U.S.')) +
+  scale_x_discrete(breaks = pretty_breaks()) +
+  scale_y_continuous(expand = c(0, 0)) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  ggtitle("M3.0+ U.S. earthquakes 1995 to August 2015\nOklahoma versus everyone else")
+```
+
+Just by eyeballing the chart, we can see that Oklahoma contributes a rather non-trivial number of reported earthquakes to the U.S. total. In 2015, through August, it appears to have about as many earthquakes as the other _49 states combined_.
+
+Let's see the breakdown by month, since 2008:
 
 
 ```{r, ok_vs_us_combined_from_2008_by_month, warning = F, message = F}
@@ -361,72 +650,97 @@ Stacked charts
 mbreaks <- as.numeric(seq(as.Date('2008-01-01'), as.Date('2015-08-01'), '1 month'))
 states_quakes_ge_2008 <- filter(states_quakes, year >= 2008)
 
-ggplot(data = states_quakes_ge_2008, aes(x = ceiling_date(time, 'month'), y = ..count..)) +
+ggplot(data = states_quakes_ge_2008, aes(x = floor_date(date, 'month'), y = ..count..)) +
   stat_bin(aes(fill = !is_OK), breaks = mbreaks, position = "stack") +
   scale_x_date(breaks = date_breaks("year"), labels = date_format("%Y")) +
   scale_y_continuous(expand = c(0, 0)) +
-  scale_fill_manual(values = c("#FF6600", "gray"), labels = c("Oklahoma", "All other states")) +
+  scale_fill_manual(values = c("#FF6600", "lightblue"), labels = c("Oklahoma", "All other states")) +
   guides(fill = guide_legend(reverse = TRUE)) +
-  ggtitle("Monthly M3.0+ Earthquakes, Oklahoma vs. Other U.S. Combined")
+  ggtitle("M3.0+ U.S. earthquakes by month, Oklahoma vs. other states combined")
 ```
 
 
+A stacked chart with 100% height gives a clearer picture of the ratio of Oklahoma to U.S. earthquakes: 
 
-
-
-Stacked chart by year
-
-```{r, ok_vs_us_combined_from_2008_by_year, message = F}
-ggplot(states_quakes, aes(x = factor(year))) +
-  geom_histogram(aes(fill = !is_OK), binwidth = 1) +
-  scale_fill_manual(values = c("#FF6600", "grey"),
-                    labels = c('Oklahoma', 'All other U.S.')) +
-  scale_x_discrete(breaks = pretty_breaks()) +
-  scale_y_continuous(expand = c(0, 0)) +
-  guides(fill = guide_legend(reverse = TRUE)) +
-  ggtitle("Earthquakes in the U.S. by year since 2000, Oklahoma versus Others")
-```
-
-Stacked chart, ratio
 
 
 ```{r, ok_vs_us_combined_from_2008_stacked_ratio, message = F}
 ggplot(states_quakes, aes(factor(year))) +
   geom_histogram(aes(fill = factor(ifelse(STUSPS == 'OK', 'OK', 'Other'))) , binwidth = 1, position = "fill") +
-  scale_fill_manual(values = c("#FF6600", "grey")) +
+  scale_fill_manual(values = c("#FF6600", "lightblue"), labels = c("Oklahoma", "All other states")) +
   scale_x_discrete(breaks = pretty_breaks()) +
-  scale_y_continuous(expand = c(0, 0)) +
-  ggtitle("Earthquakes in the U.S. by year since 2005, Oklahoma versus Others")
+  scale_y_continuous(expand = c(0, 0), labels = percent) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  ggtitle("M3.0+ U.S. earthquakes 1995 to August 2015\nOklahoma versus everyone else")
 ```
 
 
+Remember the [trendline chart of U.S. monthly earthquakes showing a general uptick since 2011](#histogram_us_earthquakes_monthly_trendline-mark)? What does that chart look like when _we remove Oklahoma from the national picture_? 
+
+Below, I re-aggregate `states_quakes`, except I group by `is_OK` and by `year_month`:
+
+```{r, message = F}
+states_quakes_by_month_and_is_OK <- states_quakes %>%
+  mutate(year_month = strftime(date, '%Y-%m'),
+         ok_label = ifelse(is_OK, "Just Oklahoma", "Excluding Oklahoma")) %>%
+  group_by(year_month, ok_label) %>%
+  summarise(count = n())
+# In order to get a third facet in my facet_grid that includes quakes for both OK 
+# *and* the other states, I do this hack where I essentially duplicate the 
+# data and create another value for is_OK. Yes, I realize that that is a terrible
+# hack, but we're almost done here
+states_quakes_by_month_plus_all <- bind_rows(
+  states_quakes_by_month_and_is_OK,
+  states_quakes %>% 
+    mutate(year_month = strftime(date, '%Y-%m'), ok_label = "All states") %>%
+    group_by(year_month, ok_label) %>%
+    summarise(count = n())
+  ) # ugh I feel dirty
+
+# I'm only doing this to add prettier labels to the next chart...I'm sure
+# there's a more conventional way to do this if only I better understood
+# stat_bin...oh well, I need lapply practice...
+c_breaks = lapply(seq(1995, 2015, 2), function(y){ paste(y, "01", sep = '-')})
+c_labels = seq(1995, 2015, 2)
+```
+
+Now, create a __facet_wrap()__ using `is_OK` (thanks to [StackOverflow for these tips on custom-labelling of facets](http://stackoverflow.com/questions/3472980/ggplot-how-to-change-facet-labels)). Note that as in the previous trendline example, I cut the y-axis off at 200 so that the trendline delta is easier to see:
+
+```{r, histogram_us_earthquakes_monthly_trendline_facet_all, message = F}
+ggplot(data = states_quakes_by_month_plus_all, 
+       aes(x = year_month, y = count, group = 1, 
+           fill = ok_label,
+           alpha = year_month >= "2011")) +
+  geom_bar(stat = 'identity') +
+  geom_smooth(color = "black", fill = 'red', linetype = "dashed") +
+  scale_alpha_discrete(range = c(0.4, 1.0)) +
+  scale_x_discrete(breaks = c_breaks, labels = c_labels) +
+  scale_fill_manual(values = c("darkblue", "lightblue", "#FF6600" )) + 
+  scale_y_continuous(expand = c(0, 0)) +
+  coord_cartesian(ylim = c(0, 200)) + 
+  facet_wrap(~ ok_label, ncol = 1) +
+  guides(fill = FALSE, alpha = FALSE) +
+  ggtitle("Trend of M3.0+ U.S. earthquakes by month, 1995 to August 2015") +
+  theme(panel.margin.y = unit(1, "lines"))
+```
+
+
+## Chapter 3 conclusion
+
+So what have we shown so far? 
+
+- Oklahoma recent surge of earthquakes is dramatic compared to its earthquake history since 1995
+- Oklahoma's surge of earthquakes is far greater than what any other state is currently experiencing.
+- Despite being a historically seismically-inactive state, Oklahoma has now become one of the top states overall in earthquake activity, thanks solely to its post-2011 surge.
+
+Despite all that work, we haven't really shown anything _compelling_. That is, no one was seriously doubting the number of earthquakes hitting Oklahoma. The main question is: __are the earthquakes caused by drilling activity?__ The analsyis we have performed thus far has said _nothing_ on this issue.
+
+In the final chapter, we will _approach_ this question by attempting to correlate Oklahoma's earthquake data with industry data on injection wells. And it _will_ be messy.
 
 
 
 
 
-
-
-
-
-
-
-
-
-<!--
-To render this file:
-
-library(rmarkdown)
-library(knitr)
-setwd("~/Dropbox/rprojs/ok-earthquakes-Rnotebook/")
-this_file <- 'chapter-3-exploring-historical-data.Rmd'
-
-opts_chunk$set(fig.width = 9, fig.height = 5, dpi = 200)
-render(this_file, output_dir = './build_md', md_document(variant = "markdown_github", preserve_yaml = FALSE))
-
-render(this_file, output_dir = './builds', html_document(toc = TRUE, self_contained = F))
-
--->
 
 
 
