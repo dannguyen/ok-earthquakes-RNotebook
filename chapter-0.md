@@ -19,7 +19,7 @@ __Quick nav__:
 
 The concepts of this walkthrough summed up in an animated GIF composed of charts created with ggplot2:
 
-![Animated GIF](./images/ok-earthquakes/optimized-movie-quakes-OK.gif)
+![Animated GIF](./images/optimized-movie-quakes-OK.gif)
 
 
 <a id="chapter-summaries"></a>

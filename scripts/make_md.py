@@ -23,7 +23,20 @@ PROJECTS = ['chapter-1-intro',
 'chapter-3-exploring-historical-data',
 'chapter-4-geocorrelation']
 
-final_mdtext = open("./chapter-0.md").read()
+
+def convert_prod_text(txt, fig_path):
+    t2 = txt.replace(fig_path, PRODUCTION_IMAGE_PATH).replace(
+            "``` r", "```R"
+        ).replace("```", "~~~"
+        ).replace(
+            "./images", PRODUCTION_IMAGE_PATH)
+    return t2
+
+
+### Start the build
+
+
+final_mdtext = convert_prod_text(open("./chapter-0.md").read(), './images')
 
 base_dir = realpath('.')
 for project_name in PROJECTS:
@@ -47,11 +60,7 @@ for project_name in PROJECTS:
     with open(md_path) as f:
         mdtext = f.read()
     # replace image paths
-    final_mdtext += "\n" + mdtext.replace(fig_path, PRODUCTION_IMAGE_PATH).replace(
-            "``` r", "```R"
-        ).replace("```", "~~~").replace(
-            "./images", PRODUCTION_IMAGE_PATH
-        )
+    final_mdtext += "\n" + convert_prod_text(mdtext, fig_path)
 
     # copy over images
     for figname in glob(join(fig_path, '*.png')):

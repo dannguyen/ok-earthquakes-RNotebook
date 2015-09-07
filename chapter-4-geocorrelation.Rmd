@@ -88,13 +88,16 @@ Filter and mutate the data
 ```{r, warning = F, message = F}
 # Remove all non earthquakes and events
 # with magnitude less than 3.0:
-quakes <- usgs_data %>% filter(mag >= 3.0, type == 'earthquake')
+quakes <- usgs_data %>%
+          filter(mag >= 3.0, type == 'earthquake') %>%
+          mutate(time = ymd_hms(time)) %>%
+          mutate(date = as.Date(time)) %>%
+          mutate(year = year(time)) %>%
+          mutate(era = ifelse(year <= 2000, "1995-2000",
+            ifelse(year <= 2005, "2001-2005",
+            ifelse(year <= 2010, "2006-2010", "2011-2015"))))
+```
 
-quakes$time <- as.Date(quakes$time)
-quakes$year <- year(quakes$time)
-quakes <- mutate(quakes, era = ifelse(year <= 2000, "1995-2000",
-          ifelse(year <= 2005, "2001-2005",
-          ifelse(year <= 2010, "2006-2010", "2011-2015"))))
 ```
 
 ```{r, warning = F, message = F}
@@ -108,6 +111,14 @@ states_quakes <- cbind(sp_quakes, xdf) %>% filter(!is.na(STUSPS))
 states_quakes <- mutate(states_quakes, is_OK = STUSPS == 'OK')
 ```
 
+Making data frames for just Oklahoma:
+
+```{r, warning = F, message = F}
+# Dataframe of just Oklahoma quakes:
+ok_quakes <- filter(states_quakes, is_OK)
+# map of just Oklahoma state:
+ok_map <- states_map[states_map$STUSPS == 'OK',]
+```
 
 
 
@@ -462,180 +473,6 @@ ggplot() +
   theme_dan_map()
 ```
 
--------------
-Map it: (TODO: Delete these)
-
-
-```{r, warning = F, message = F}
-ggplot() +
-  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
-               fill = "white", color = "black") +
-  geom_point(data = filter(wells_2013, total_volume <= 360000),
-             aes(x = X, y = Y),
-             alpha = 0.3, shape = 1, color = 'yellow') +
-  geom_point(data = filter(wells_2013, total_volume >= 360000),
-             aes(x = X, y = Y),
-             alpha = 0.3, shape = 1, color = 'purple') +
-  geom_point(data = filter(ok_quakes, year >= 2012), aes(x = longitude, y = latitude),
-            alpha = 0.1, shape = 1, color = 'red') +
-  coord_map("albers", lat0 = 38, latl = 42) + theme_dan_map() +
-  ggtitle("2013 UIC and quakes")  +
-  facet_wrap(~ year, ncol = 1)
-```
-
-
-```{r, warning = F, message = F}
-ggplot() +
-  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
-               fill = "white", color = "black") +
-  geom_point(data = filter(wells_2012, total_volume < 360000),
-             aes(x = X, y = Y),
-             alpha = 0.3, shape = 1, color = 'yellow') +
-  geom_point(data = filter(wells_2012, total_volume >= 360000),
-             aes(x = X, y = Y),
-             alpha = 0.3, shape = 1, color = 'purple') +
-  geom_point(data = filter(ok_quakes, year >= 2012), aes(x = longitude, y = latitude),
-            alpha = 0.1, shape = 1, color = 'red') +
-
-  coord_map("albers", lat0 = 38, latl = 42) + theme_dan_map() +
-  ggtitle("2012 UIC and quakes") +
-  facet_wrap(~ year, ncol = 1)
-```
-
-
-2011 map:
-
-
-```{r, warning = F, message = F}
-ggplot() +
-  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
-               fill = "white", color = "black") +
-  geom_point(data = filter(wells_2011, total_volume < 360000),
-             aes(x = X, y = Y),
-             alpha = 0.3, shape = 1, color = 'yellow') +
-  geom_point(data = filter(wells_2011, total_volume >= 360000),
-             aes(x = X, y = Y),
-             alpha = 0.3, shape = 1, color = 'purple') +
-  geom_point(data = filter(ok_quakes, year >= 2012), aes(x = longitude, y = latitude),
-            alpha = 0.1, shape = 1, color = 'red') +
-
-  coord_map("albers", lat0 = 38, latl = 42) + theme_dan_map() +
-  ggtitle("2011 UIC and quakes") +
-  facet_wrap(~ year, ncol = 1)
-```
-
-
-## Maps
-
-
-TK: Justify the use of Hexbin map, similar to binning by year instead of day
-
-
-Hexbin map without projection
-
-Earthquakes:
-
-```{r, warning = F, message = F}
-ggplot() +
-  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
-               fill = "white", color = "black") +
-  stat_binhex(data = ok_quakes, aes(x = longitude, y = latitude, alpha = ..count..), bins = 30 ) +
-  scale_fill_gradientn(colours=c("white","red")) +
-  coord_equal() +
-  theme_dan_map()
-```
-
-
-
-TK: http://stackoverflow.com/questions/13167531/ggplot2-multiple-stat-binhex-plots-with-different-color-gradients-in-one-image
-
-overlay of injections and earthquakes
-
-
-```{r, warning = F, message = F}
-ggplot() +
-  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
-               fill = "white", color = "black") +
-  stat_summary_hex(data = wells_2013, aes(x = X, y = Y, z = total_volume), bins = 30 ) + scale_fill_gradientn(colours=c("white","green")) +
-  stat_binhex(data = ok_quakes, aes(x = longitude, y = latitude, alpha = ..count..), bins = 30 ) +
-
-  coord_equal() +
-  theme_dan_map()
-```
-
-
-
-
-Hexbin map with injections
-```{r, warning = F, message = F}
-ggplot() +
-  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
-               fill = "white", color = "black") +
-  stat_summary_hex(data = wells_2013, aes(x = X, y = Y, z = total_volume), alpha = 0.9, bins = 20 ) +
-  geom_point(data = ok_quakes, aes(x = longitude, y = latitude),
-           alpha = 0.1, size = 0.2, shape = 1, color = 'red')
-
-```
-
-
-
-
--------------
-
-
-```{r, warning = F, message = F}
-
-sp_ok_quakes <- SpatialPointsDataFrame(data = ok_quakes,
-                          coords = ok_quakes[,c("longitude", "latitude")])
-proj4string(sp_ok_quakes) <- proj4string(ok_map)
-
-sp_wells_2013 <- SpatialPointsDataFrame(data = wells_2013,
-                          coords = wells_2013[,c("X", "Y")])
-
-proj4string(sp_wells_2013) <- proj4string(ok_map)
-
-albers_crs <- CRS("+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs")
-ok_map.albers <- spTransform(ok_map, albers_crs)
-ok_quakes.albers <- as.data.frame(spTransform(sp_ok_quakes, albers_crs))
-wells_2013.albers <- as.data.frame(spTransform(sp_wells_2013, albers_crs))
-
-###0-----------
-# look ma, no coord_map
-ggplot() +
-  geom_polygon(data = ok_map.albers, aes(x = long, y = lat, group = group),
-               fill = "white", color = "black") +
-  geom_point(data = filter(wells_2013.albers, total_volume < 300000),
-             aes(x = X.1, y = Y.1),
-             alpha = 0.3 , color = 'green', size = 0.4, shape = 1) +
-  geom_point(data = filter(wells_2013.albers, total_volume >= 300000),
-             aes(x = X.1, y = Y.1),
-             alpha = 0.3 , color = 'yellow', size = 1, shape = 1) +
-
-  geom_point(data = ok_quakes.albers, aes(x = longitude.2, y = latitude.2),
-            alpha = 0.3, size = 1, shape = 1, color = 'red') +
-  theme_dan_map()
-```
-
-Small multiples
-
-
-```{r}
-ggplot() +
-  geom_polygon(data = ok_map.albers, aes(x = long, y = lat, group = group),
-               fill = "white", color = "black") +
-  geom_point(data = filter(wells_2013.albers, total_volume < 300000),
-             aes(x = X.1, y = Y.1),
-             alpha = 0.3 , color = 'green', size = 0.4, shape = 1) +
-  geom_point(data = filter(wells_2013.albers, total_volume >= 300000),
-             aes(x = X.1, y = Y.1),
-             alpha = 0.3 , color = 'yellow', size = 1, shape = 1) +
-
-  geom_point(data = filter(ok_quakes.albers, year >= 2013), aes(x = longitude.2, y = latitude.2),
-            alpha = 0.3, size = 1, shape = 1, color = 'red') +
-  theme_dan_map() + facet_wrap(~ year, ncol = 1)
-```
-
-
 
 
 # Gas prices
@@ -665,8 +502,8 @@ gasdata <- read.csv("./data/stlouisfed-oil-prices.csv", stringsAsFactors = F) %>
 
 
 ```{r, warning = F, message = F}
-okquakes_weekly <- mutate(ok_quakes, week = floor_date(time, 'week'), panel = 'Quakes') %>%
-  filter(year(time) >= 2008) %>%
+okquakes_weekly <- mutate(ok_quakes, week = floor_date(date, 'week'), panel = 'Quakes') %>%
+  filter(year >= 2008) %>%
   group_by(week) %>%
   summarize(count = n())
 
@@ -739,82 +576,31 @@ http://news.stanford.edu/news/2015/june/okla-quake-drilling-061815.html
 
 
 
+
+
+
 ## Trying Google Maps
 
 
 ```{r, warning = F, message = F}
 library(ggmap)
-ok_goog_map <- get_googlemap(center = c(lon = -99.007, lat = 35.38905),  size = c(450,250), zoom = 6, scale = 2, maptype = 'hybrid',
+ok_goog_map <- get_googlemap(center = c(lon = -99.007, lat = 35.38905),  size = c(450,250), zoom = 6, scale = 2, maptype = 'terrain',
 style = c(feature = "administrative.province", element = "labels", visibility = "off"))
+ggmap(ok_goog_map)
 ```
 
-With points
+Stamen map
 
 ```{r, warning = F, message = F}
-ggmap(ok_goog_map, extent = 'panel') +
-  geom_point(data = ok_quakes, aes(x = longitude, y = latitude), alpha = 0.2, shape = 4, colour = "red")
+ok_bounds <- c( left = -103.3, 
+                bottom = 33.5,
+                top = 37.0,
+                right = -94.2
+                )
+ok_stamen_map <- get_stamenmap(bbox = ok_bounds, zoom = 7, maptype =  "toner-hybrid",crop = T)
+  
+ggmap(ok_stamen_map)
 ```
-
-
-With hexbin:
-
-```{r, warning = F, message = F}
-ggmap(ok_goog_map, extent = 'panel') +
-  stat_binhex(data = ok_quakes, aes(x = longitude, y = latitude, alpha = ..count..), bins = 30 ) +
-  scale_fill_gradientn(colours=c("white","red")) +
-  guides(alpha = FALSE)
-```
-
-
-Focus on Oklahoma City area:
-
-
-```{r, warning = F, message = F}
-okcity_goog_map  <- get_googlemap(center = c(lon = -97.437287, lat = 36.1815),  size = c(640,640), zoom = 9, scale = 2, maptype = 'hybrid',
-style = c(feature = "administrative.province", element = "labels", visibility = "off"))
-
-```
-
-Hexbin
-```{r, warning = F, message = F}
-ggmap(okcity_goog_map) +
-  stat_binhex(data = ok_quakes, aes(x = longitude, y = latitude, color = ..count..), bins = 30, fill = NA, alpha = 0.5 ) +
-  scale_color_gradientn(colours=c("white","red")) +
-  guides(fill = FALSE) + theme_dan_map()
-
-```
-
-
-----------------
-
-Volumes on monthly
-
-http://advances.sciencemag.org/content/1/5/e1500195.figures-only
-
-```{r}
-wells_by_month <- mutate(injections_2013, had_30k_month = Volume >= 30000) %>%
-            group_by(API, had_30k_month, X, Y) %>% summarise()
-
-```
-
-```{r}
-ggplot() +
-  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
-               fill = "white", color = "black") +
-  geom_point(
-    data = filter(wells_by_month, !had_30k_month),
-    aes(x = X, y = Y), shape = 1, color = "yellow", alpha = 0.2) +
-  geom_point(
-    data = filter(wells_by_month, had_30k_month),
-    aes(x = X, y = Y), shape = 1, color = "purple", alpha = 0.4) +
-  geom_point(
-    data = filter(ok_quakes, year >= 2013),
-    aes(x = longitude, y = latitude), shape = 1, color = "green", alpha = 0.3) +
-  coord_map("albers", lat0 = 38, latl = 42) +
-  theme_dan_map()
-```
-
-
 
 
 ------
