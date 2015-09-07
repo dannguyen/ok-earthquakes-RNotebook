@@ -143,8 +143,9 @@ ggplot() +
   geom_point(data = cg_quakes, aes(x = longitude, y = latitude, color = era), shape = 4,  alpha = 0.2) +
   coord_map("albers", lat0 = 38, latl = 42) +
   guides(colour = guide_legend(override.aes = list(alpha = 1))) +
+  scale_colour_brewer(type = "qual", palette = "Accent") +
   theme_dan_map() +
-  ggtitle("M3.0+ earthquakes in U.S. since 1995")
+  ggtitle("M3.0+ earthquakes in U.S. since 1995") 
 
 ```
 
@@ -330,9 +331,10 @@ Summarise by location
 ```{r}
 q1 <- ggplot(data = all_wells %>%
          group_by(Y, ReportYear) %>% summarize(total = sum(total_volume)), 
-       aes(x = factor(ReportYear), y = total, order = desc(Y >= 36.5), 
-           fill = Y >= 36.5)) + geom_bar(stat = 'identity') +
-        scale_fill_manual(values = c("gray", "#FF6600"), labels = c("Below 36.5", "Above 36.5")) +
+       aes(x = factor(ReportYear), y = total, order = desc(Y >= 36), 
+           fill = Y >= 36)) + geom_bar(stat = 'identity') +
+        scale_fill_manual(values = c("#EEEEEE", "#FF6600"), labels = c("Below 36.5", "Above 36.5")) +
+        scale_x_discrete(limits = c(2006:2015), labels = c("2012", "2013") )+
       guides(fill = guide_legend(reverse = F)) 
 ```
 
@@ -340,18 +342,19 @@ q1 <- ggplot(data = all_wells %>%
 Histogram of quakes
 
 ```{r}
-q2 <- ggplot(data = filter(ok_quakes, year >= 2007, year <= 2014), 
-       aes(x = factor(year), order = desc(latitude >= 36.5),
-           fill = latitude >= 36.5)) + geom_histogram(binwidth = 1) +
-        scale_fill_manual(values = c("gray", "#FF6600"), labels = c("Below 36.5", "Above 36.5")) +
+q2 <- ggplot(data = filter(ok_quakes, year >= 2006), 
+       aes(x = factor(year), order = desc(latitude >= 36),
+           fill = latitude >= 36)) + geom_histogram(binwidth = 1) +
+        scale_fill_manual(values = c("#EEEEEE", "#FF6600"), labels = c("Below 36.5", "Above 36.5")) +
       guides(fill = guide_legend(reverse = F)) 
 ```
 
 
 ```{r}
 grid.arrange(
-  q1 + theme(axis.text.y = element_blank()), 
-  q2 + theme(axis.text.y = element_blank()))
+  q1 + theme(axis.text.y = element_blank()) + ggtitle("Annual injection volumes"), 
+  q2 + theme(axis.text.y = element_blank()) + ggtitle("Annual count of M3.0+ earthquakes")
+)
 ```
 
 
@@ -435,8 +438,11 @@ ggplot() +
   
   coord_equal() + 
   theme_dan_map() +
-  facet_wrap(~ ReportYear, ncol = 1)
+  facet_wrap(~ ReportYear, ncol = 2)
 ```
+
+
+
 
 
 Do side by side facet of earthquakes
@@ -455,6 +461,83 @@ ggplot() +
 ```
 
 
+
+#### Draw a highlight box
+
+```{r}
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
+               fill = "white", color = "black") +
+  stat_summary_hex(data = filter(all_wells, ReportYear >= 2010),
+                   aes(x = X, y = Y, z = total_volume), 
+                   bins = 30, 
+                   fun = function(z){
+                     sz <- min(sum(z), 60000000)
+                     ifelse(sz > 10000000, sz, NA)
+                    }, 
+                   color = 'white', drop = TRUE ) +
+  geom_rect(data = ok_map, aes(
+      xmin = -99, xmax = -97.5,
+      ymin = 36, ymax = 37
+    ), fill = "NA", color = "red", linetype = "dashed", size = 0.5) +   
+  scale_fill_gradientn(colours = c("#DDDDEC", "purple"), na.value = NA) + 
+  
+  coord_equal() + 
+  theme_dan_map() +
+  facet_wrap(~ ReportYear, ncol = 2)
+```
+
+Do the same with earthquakes:
+
+```{r}
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
+               fill = "white", color = "black") +
+  stat_binhex(data = filter(ok_quakes, year >= 2011, year <= 2014), 
+              aes(x = longitude, y = latitude), bins = 30, color = "#FFFFFF") +
+  geom_rect(data = ok_map, aes(
+      xmin = -99, xmax = -97.5,
+      ymin = 36, ymax = 37
+    ), fill = "NA", color = "red", linetype = "dashed", size = 0.5) + 
+
+  scale_fill_gradient(low = "#ECDDDD", high = "red") + 
+  coord_equal() + 
+  theme_dan_map() +
+  facet_wrap(~ year, ncol = 2)
+```
+
+
+### Test, volume and alpha:
+
+```{r}
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
+               fill = "white", color = "black") +
+  stat_summary_hex(data = filter(all_wells, ReportYear == 2006), 
+                   aes(x = X, y = Y, z = total_volume),
+                   alpha = 0.5,
+                   bins = 30, 
+                   fun = function(z){ sum(z) },
+                   color = 'white') +
+  scale_fill_gradientn(colours = c("#DDDDEC", "#002BFF"), na.value = NA) + 
+    coord_equal() + 
+  theme_dan_map() 
+```
+
+```{r}
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
+               fill = "white", color = "black") +
+  stat_summary_hex(data = filter(all_wells, ReportYear == 2013), 
+                   aes(x = X, y = Y, z = total_volume),
+                   alpha = 0.5,
+                   bins = 30, 
+                   fun = function(z){ sum(z) },
+                   color = 'white') +
+  scale_fill_gradientn(colours = c("#DDDDEC", "#FFD500"), na.value = NA) + 
+    coord_equal() + 
+  theme_dan_map() 
+```
 
 -------------
 Map it: (TODO: Delete these)
