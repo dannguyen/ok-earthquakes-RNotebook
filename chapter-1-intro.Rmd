@@ -51,7 +51,36 @@ In Chapter 3, I briefly explain the [relatively simple code for automating the c
 - [type](http://earthquake.usgs.gov/earthquakes/feed/v1.0/glossary.php#type), as in, type of seismic event, which includes earthquakes, explosions, and quarry.
 -
 
-## The U.S. Census Map Boundaries
+## The U.S. Census Cartographic Boundary Shapefiles
+
+https://www.census.gov/geo/maps-data/data/tiger-cart-boundary.html
+
+> The cartographic boundary files are simplified representations of selected geographic areas from the Census Bureau’s MAF/TIGER geographic database.   These boundary files are specifically designed for small scale thematic mapping.
+
+> Generalized boundary files are clipped to a simplified version of the U.S. outline.  As a result, some off-shore areas may be excluded from the generalized files.
+
+> For more details about these files, please see our [Cartographic Boundary File Description page](https://www.census.gov/geo/maps-data/data/cbf/cbf_description.html).
+
+There are shapefiles for various levels of political boundaries. We'll use the ones found on [the states page](https://www.census.gov/geo/maps-data/data/cbf/cbf_state.html). The lowest resolution file -- 1:20,000,000, i.e. 1 inch represents 20 million real inches -- is adequate for our charting purposes.
+
+The direct link to the Census's 2014 1:20,000,000 shape file is [here](https://www.census.gov/geo/maps-data/data/cbf/cbf_counties.html). I've also included it in this repo's `data/` directory.
+
+
+
+### Why state boundaries?
+
+The Census shapefiles are conveniently packaged for the analysis we want to do, though we'll find out in Chapter 2 that there's a good amount of complexity in preparing geospatial boundary data for visualization.
+
+But the bigger question is: Are state boundaries really the best way to categorize earthquakes? These boundaries are _political_ and have no correlation with the __seismic__ lines that earthquakes occur along. So, even if we assume _something_ man-made is causing the earthquakes, it could very well be drilling in Texas, or any of Oklahoma's other neighbors, that are causing Oklahoma's earthquake swarm. And conversely, earthquakes caused by Oklahoma drilling but occur within other states' borders will be uncounted when doing a strict state-by-state analysis.
+
+To quote from the [New Yorker](http://www.newyorker.com/magazine/2015/04/13/weather-underground):
+
+> When I spoke to Holland, I had the impression of a man who loved science and was politely trying to endure waking up each day, after insufficient sleep, to discover himself in the role of a politician. At the conference, someone asked Holland about several earthquakes of greater than 4.0 magnitude which had occurred a few days earlier, across Oklahoma’s northern border, in Kansas. Holland joked, “Well, the earthquakes aren’t stopping at the state line, but my problems do.” There was a follow-up question: Why had there previously been no quakes in Kansas—and now for a year and a half there have been so many?
+
+
+
+
+
 
 ## About the Oklahoma Corporation Commission
 

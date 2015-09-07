@@ -113,7 +113,7 @@ make_quake_histogram <- function(yrmth){
                label = this_title, lineheight = 0.8, family = "Gill Sans MT") +
     # annotate chart text
     annotate("text", x = "2005-01", y = 100, size = rel(1.5), hjust = 0, family = "Gill Sans MT",
-               label = c("Earthquakes of at least magnitude 3.0\nin the contiguous United States.\n\nData from the U.S. Geological Survey.\nChart by Dan Nguyen @dancow\nStanford Computational Journalism")
+               label = c("Earthquakes of at least magnitude 3.0\nin the contiguous United States.\n\nData from the U.S. Geological Survey.\nChart by Dan Nguyen @dancow\nStanford Computational Journalism Lab")
             ) +
     annotate("text", x = "2013-03", y = 50, size = rel(1.5), hjust = 0, family = "Gill Sans MT",
                label = "Oklahoma's portion of earthquakes\nis colored in orange."

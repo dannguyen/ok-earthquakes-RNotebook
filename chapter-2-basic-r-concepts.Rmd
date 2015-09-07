@@ -141,7 +141,7 @@ However, I'll often use the __mutate()__ function from the __dplyr__ package:
 usgs_data <- mutate(usgs_data, time =  ymd_hms(time))
 ```
 
-
+__Note:__ In subsequent chapters, I convert the `time` attribute with the standard `as.Date()` function and use lubridate for other conversions.
 
 
 
@@ -248,10 +248,11 @@ nrow(quakes)
 It's worth remembering that a geographical map can be thought of a [plain ol' scatter plot](http://docs.ggplot2.org/0.9.3/geom_point.html). In this case, each dot is plotted using the __longitude__ and __latitude__ values, which serve as the __x__ and __y__ coordinates, respectively:
 
 ```{r, quake_points_no_map, message = FALSE, warning = FALSE}
-ggplot(quakes, aes(x = longitude, y = latitude)) + geom_point()
+ggplot(quakes, aes(x = longitude, y = latitude)) + geom_point() +
+  ggtitle("M3.0+ earthquakes worldwide, August 2015")
 ```
 
-Even without the world map boundaries, we can see in the locations of the earthquakes a rough outline of the world's fault lines:
+Even without the world map boundaries, we can see in the locations of the earthquakes a rough outline of the world's fault lines. Compare the earthquakes plot to this [Digital Tectonic Activity Map from NASA](http://earthobservatory.nasa.gov/Features/Tectonics/):
 
 ![Digital Tectonic Activity Map of the Earth, via NASA](./images/Plate_tectonics_map.gif)
 
@@ -263,8 +264,9 @@ We can apply these styles in the `geom_point()` call:
 ggplot(quakes, aes(x = longitude, y = latitude)) +
   geom_point(size = 3,
              alpha = 0.2,
-             shape = 4,
-             color = 'firebrick')
+             shape = 1,
+             color = 'firebrick') +
+  ggtitle("M3.0+ earthquakes worldwide, August 2015")
 ```
 
 #### Varying the size by magnitude
