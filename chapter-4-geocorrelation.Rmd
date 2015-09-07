@@ -210,7 +210,7 @@ if (!file.exists(fname)){
 injections_data_2013 <- read_excel(fname)
 injections_2013 <-  injections_data_2013 %>%
     mutate(Volume = as.numeric(Volume),
-           API = as.character(API)) %>%
+           API = as.character(API), ReportYear = as.numeric(ReportYear)) %>%
     # filter out rows with missing Volume or erroneous X/Y
     filter(!is.na(Volume),
            !is.na(X), X != 0,  X < -90, X > -100,
@@ -222,32 +222,301 @@ Aggregate the wells by their unique identifier and create a `total_volume` colum
 
 
 ```{r, warning = F, message = F}
-wells_2013 <-  as.data.frame(group_by(injections_2013, API, X, Y) %>%
-    summarise(counts = n(), total_volume = sum(Volume)) %>%
-    arrange(desc(counts)))
+wells_2013 <-   group_by(injections_2013, ReportYear, API, X, Y) %>%
+    summarise(total_volume = sum(Volume))
+```
+
+
+
+Note that there is 2012 UIC data. However, this data does _not_ have X/Y coordinate data.
+
+
+```{r}
+fname <- "./data/2012_UIC_Injection_Volumes_Report.xlsx"
+if (!file.exists(fname)){
+  url <- "http://www.occeweb.com/og/2012Injections20141029.xlsx"
+  print(paste("Downloading: ", url))
+  download.file(url, fname)
+}
+tdf  <- read_excel(fname)
+injections_data_2012 <- tdf[, colSums(is.na(tdf)) != nrow(tdf)] %>%
+    mutate(Volume = as.numeric(Volume),
+          API = as.character(API), ReportYear = as.numeric(ReportYear)) %>%
+    filter(!is.na(Volume))
+```
+
+Do a join:
+
+```{r}
+wells_2012 <- injections_data_2012 %>%
+  left_join(select(as.data.frame(wells_2013), API, X, Y), by = 'API') %>%
+  group_by(API, X, Y, ReportYear) %>%
+  summarise(total_volume = sum(Volume))
+```
+
+
+#### 2011
+
+```{r}
+fname <- "./data/2011_UIC_Injection_Volumes_Report.xlsx"
+if (!file.exists(fname)){
+  url <- "http://www.occeweb.com/og/2011INJECTIONVOLUMES.xlsx"
+  print(paste("Downloading: ", url))
+  download.file(url, fname)
+}
+tdf <- read_excel(fname)
+# remove NA columns http://stackoverflow.com/questions/15968494/how-to-delete-columns-with-na-in-r
+injections_data_2011 <- tdf[, colSums(is.na(tdf)) != nrow(tdf)] %>%
+    mutate(Volume = as.numeric(Volume),
+           API = as.character(API), ReportYear = as.numeric(ReportYear)) %>%
+    filter(!is.na(Volume))
+
+wells_2011 <- injections_data_2011 %>%
+  left_join(select(as.data.frame(wells_2013), API, X, Y), by = 'API') %>%
+  group_by(API, X, Y, ReportYear) %>%
+  summarise(total_volume = sum(Volume))
+
+```
+
+"All UIC 1012A Reports" data
+
+
+```{r}
+fname <- "./data/all_2006-2010uic_1012a.xls"
+if (!file.exists(fname)){
+  url <- "http://www.occeweb.com/og/all_2006-2010uic_1012a.xls"
+  print(paste("Downloading: ", url))
+  download.file(url, fname)
+}
+tdf <- read_excel(fname)
+# remove NA columns http://stackoverflow.com/questions/15968494/how-to-delete-columns-with-na-in-r
+# the column names are very screwed up
+names(tdf) <- c('API_COUNTY', 'API', 'LEASE_NAME', 'WELL_NUMBER', 'Y', 'X', 'YEAR', 'FLUID_TYPE', 'PACKERDPTH', 'total_volume')
+
+injections_data_2006_2010 <- tdf[, colSums(is.na(tdf)) != nrow(tdf)] %>%
+    mutate(total_volume = as.numeric(total_volume),
+           API = as.character(API), ReportYear = as.numeric(YEAR),
+           X = as.numeric(X), Y = as.numeric(Y)
+           ) %>%
+    filter(!is.na(total_volume),
+           ReportYear <= 2010,
+           !is.na(X), X != 0,  X < -90, X > -100,
+           !is.na(Y), Y != 0, Y > 33.5, Y < 40)
+
+wells_2006_2010 <- select(injections_data_2006_2010, API, ReportYear, X, Y, total_volume)
+
+```
+
+
+```{r}
+all_wells <- bind_rows(wells_2013, wells_2012, wells_2011, wells_2006_2010) %>%
+  filter(!is.na(X))
+```
+
+
+Histograms:
+
+
+
+```{r}
+ggplot(data = group_by(all_wells, ReportYear) 
+       %>% summarize(total = sum(total_volume)), 
+       aes(x = ReportYear, y = total)) + geom_bar(stat = 'identity')
+```
+
+Summarise by location
+
+
+```{r}
+q1 <- ggplot(data = all_wells %>%
+         group_by(Y, ReportYear) %>% summarize(total = sum(total_volume)), 
+       aes(x = factor(ReportYear), y = total, order = desc(Y >= 36.5), 
+           fill = Y >= 36.5)) + geom_bar(stat = 'identity') +
+        scale_fill_manual(values = c("gray", "#FF6600"), labels = c("Below 36.5", "Above 36.5")) +
+      guides(fill = guide_legend(reverse = F)) 
+```
+
+
+Histogram of quakes
+
+```{r}
+q2 <- ggplot(data = filter(ok_quakes, year >= 2007, year <= 2014), 
+       aes(x = factor(year), order = desc(latitude >= 36.5),
+           fill = latitude >= 36.5)) + geom_histogram(binwidth = 1) +
+        scale_fill_manual(values = c("gray", "#FF6600"), labels = c("Below 36.5", "Above 36.5")) +
+      guides(fill = guide_legend(reverse = F)) 
+```
+
+
+```{r}
+grid.arrange(
+  q1 + theme(axis.text.y = element_blank()), 
+  q2 + theme(axis.text.y = element_blank()))
 ```
 
 
 
 
+
+
+Facet wrap the wells:
+
+```{r}
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
+               fill = "white", color = "black") +
+  geom_point(data = filter(all_wells, total_volume <= 360000),
+             aes(x = X, y = Y),
+             alpha = 0.3, shape = 1, color = 'yellow') +
+  geom_point(data = filter(all_wells, total_volume >= 360000),
+             aes(x = X, y = Y),
+             alpha = 0.3, shape = 1, color = 'purple') +
+  # geom_point(data = filter(ok_quakes, year >= 2012), aes(x = longitude, y = latitude),
+  #           alpha = 0.1, shape = 1, color = 'red') +
+  coord_map("albers", lat0 = 38, latl = 42) + theme_dan_map() +
+  ggtitle("2013 UIC and quakes")  +
+  facet_wrap(~ ReportYear, ncol = 2)
+```
+
+TODO: Hexbin them
+
+
+Counts:
+
+```{r}
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
+               fill = "white", color = "black") +
+
+  stat_binhex(data = all_wells, aes(x = X, y = Y, alpha = ..count..), bins = 30 ) +
+  coord_equal() + 
+  theme_dan_map() +
+  facet_wrap(~ ReportYear, ncol = 2)
+```
+
+
+Volume
+
+
+
+```{r}
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
+               fill = "white", color = "black") +
+  stat_summary_hex(data = all_wells, 
+                   aes(x = X, y = Y, z = total_volume), 
+                   bins = 30, 
+                   fun = function(z){ sum(z) },
+                   color = 'white') +
+  scale_fill_gradientn(colours = c("#DDDDEC", "purple"), na.value = NA) + 
+  
+  coord_equal() + 
+  theme_dan_map() +
+  facet_wrap(~ ReportYear, ncol = 1)
+```
+
+
+
+Hi-lo pass:
+
+```{r}
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
+               fill = "white", color = "black") +
+  stat_summary_hex(data = all_wells, 
+                   aes(x = X, y = Y, z = total_volume), 
+                   bins = 30, 
+                   fun = function(z){
+                     sz <- min(sum(z), 60000000)
+                     ifelse(sz > 10000000, sz, NA)
+                    }, 
+                   color = 'white', drop = TRUE ) +
+  scale_fill_gradientn(colours = c("#DDDDEC", "purple"), na.value = NA) + 
+  
+  coord_equal() + 
+  theme_dan_map() +
+  facet_wrap(~ ReportYear, ncol = 1)
+```
+
+
+Do side by side facet of earthquakes
+
+
+```{r}
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
+               fill = "white", color = "black") +
+  stat_binhex(data = filter(ok_quakes, year >= 2012, year <= 2014), 
+              aes(x = longitude, y = latitude), bins = 30, color = "#FFFFFF") +
+  scale_fill_gradient(low = "#ECDDDD", high = "red") + 
+  coord_equal() + 
+  theme_dan_map() +
+  facet_wrap(~ year, ncol = 1)
+```
+
+
+
 -------------
-Map it:
+Map it: (TODO: Delete these)
+
 
 ```{r, warning = F, message = F}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
-  geom_point(data = filter(wells_2013, total_volume < 1250000),
+  geom_point(data = filter(wells_2013, total_volume <= 360000),
              aes(x = X, y = Y),
-             alpha = 0.1 , color = 'yellow') +
-  geom_point(data = filter(wells_2013, total_volume > 1250000),
+             alpha = 0.3, shape = 1, color = 'yellow') +
+  geom_point(data = filter(wells_2013, total_volume >= 360000),
              aes(x = X, y = Y),
-             alpha = 0.1 , color = 'purple') +
-  geom_point(data = ok_quakes, aes(x = longitude, y = latitude),
-            alpha = 0.1, size = 0.3, shape = 1, color = 'red') +
-  coord_map("albers", lat0 = 38, latl = 42) + theme_dan_map()
+             alpha = 0.3, shape = 1, color = 'purple') +
+  geom_point(data = filter(ok_quakes, year >= 2012), aes(x = longitude, y = latitude),
+            alpha = 0.1, shape = 1, color = 'red') +
+  coord_map("albers", lat0 = 38, latl = 42) + theme_dan_map() +
+  ggtitle("2013 UIC and quakes")  +
+  facet_wrap(~ year, ncol = 1)
 ```
 
+
+```{r, warning = F, message = F}
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
+               fill = "white", color = "black") +
+  geom_point(data = filter(wells_2012, total_volume < 360000),
+             aes(x = X, y = Y),
+             alpha = 0.3, shape = 1, color = 'yellow') +
+  geom_point(data = filter(wells_2012, total_volume >= 360000),
+             aes(x = X, y = Y),
+             alpha = 0.3, shape = 1, color = 'purple') +
+  geom_point(data = filter(ok_quakes, year >= 2012), aes(x = longitude, y = latitude),
+            alpha = 0.1, shape = 1, color = 'red') +
+
+  coord_map("albers", lat0 = 38, latl = 42) + theme_dan_map() +
+  ggtitle("2012 UIC and quakes") +
+  facet_wrap(~ year, ncol = 1)
+```
+
+
+2011 map:
+
+
+```{r, warning = F, message = F}
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
+               fill = "white", color = "black") +
+  geom_point(data = filter(wells_2011, total_volume < 360000),
+             aes(x = X, y = Y),
+             alpha = 0.3, shape = 1, color = 'yellow') +
+  geom_point(data = filter(wells_2011, total_volume >= 360000),
+             aes(x = X, y = Y),
+             alpha = 0.3, shape = 1, color = 'purple') +
+  geom_point(data = filter(ok_quakes, year >= 2012), aes(x = longitude, y = latitude),
+            alpha = 0.1, shape = 1, color = 'red') +
+
+  coord_map("albers", lat0 = 38, latl = 42) + theme_dan_map() +
+  ggtitle("2011 UIC and quakes") +
+  facet_wrap(~ year, ncol = 1)
+```
 
 
 ## Maps
@@ -340,6 +609,26 @@ ggplot() +
             alpha = 0.3, size = 1, shape = 1, color = 'red') +
   theme_dan_map()
 ```
+
+Small multiples
+
+
+```{r}
+ggplot() +
+  geom_polygon(data = ok_map.albers, aes(x = long, y = lat, group = group),
+               fill = "white", color = "black") +
+  geom_point(data = filter(wells_2013.albers, total_volume < 300000),
+             aes(x = X.1, y = Y.1),
+             alpha = 0.3 , color = 'green', size = 0.4, shape = 1) +
+  geom_point(data = filter(wells_2013.albers, total_volume >= 300000),
+             aes(x = X.1, y = Y.1),
+             alpha = 0.3 , color = 'yellow', size = 1, shape = 1) +
+
+  geom_point(data = filter(ok_quakes.albers, year >= 2013), aes(x = longitude.2, y = latitude.2),
+            alpha = 0.3, size = 1, shape = 1, color = 'red') +
+  theme_dan_map() + facet_wrap(~ year, ncol = 1)
+```
+
 
 
 
