@@ -4,7 +4,7 @@ status: unfinished
 description: "A technical walkthrough of how to research, analyze, and visualize Oklahoma's earthquakes using R."
 ---
 
-![OK google](/files/images/posts/ok-earthquakes/multi-year-OK-google-map-borderless.jpg)
+![OK google](./images/multi-year-OK-google-map-borderless.jpg)
 
 
 __Quick summary__: A four-part walkthrough exploring earthquake data in Oklahoma using R.
@@ -19,7 +19,7 @@ __Quick nav__:
 
 The concepts of this walkthrough summed up in an animated GIF composed of charts created with ggplot2:
 
-![Animated GIF](/files/images/posts/ok-earthquakes/optimized-movie-quakes-OK.gif)
+![Animated GIF](./images/ok-earthquakes/optimized-movie-quakes-OK.gif)
 
 
 <a id="chapter-summaries"></a>
