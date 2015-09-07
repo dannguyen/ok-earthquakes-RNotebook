@@ -9,7 +9,7 @@ output:
 
 <span id="chapter-4-mark"></span>
 
-# Chapter 4: Correlations and Limitations
+# Chapter 4: Correlation, limitations, and known unknowns
 
 
 Questions to answer:
@@ -47,7 +47,7 @@ dir.create('./data')
 
 Download the map data as before:
 
-```{r, warning = F, message = F}
+```{r, warning = F, message = F, results = "hide"}
 fname <- "./data/cb_2014_us_state_20m.zip"
 if (!file.exists(fname)){
   url <- "http://www2.census.gov/geo/tiger/GENZ2014/shp/cb_2014_us_state_20m.zip"
@@ -221,7 +221,7 @@ injections_2013 <-  injections_data_2013 %>%
 Aggregate the wells by their unique identifier and create a `total_volume` column:
 
 
-```{r}
+```{r, warning = F, message = F}
 wells_2013 <-  as.data.frame(group_by(injections_2013, API, X, Y) %>%
     summarise(counts = n(), total_volume = sum(Volume)) %>%
     arrange(desc(counts)))
@@ -233,7 +233,7 @@ wells_2013 <-  as.data.frame(group_by(injections_2013, API, X, Y) %>%
 -------------
 Map it:
 
-```{r}
+```{r, warning = F, message = F}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
@@ -260,7 +260,7 @@ Hexbin map without projection
 
 Earthquakes:
 
-```{r}
+```{r, warning = F, message = F}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
@@ -277,7 +277,7 @@ TK: http://stackoverflow.com/questions/13167531/ggplot2-multiple-stat-binhex-plo
 overlay of injections and earthquakes
 
 
-```{r}
+```{r, warning = F, message = F}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
@@ -292,7 +292,7 @@ ggplot() +
 
 
 Hexbin map with injections
-```{r}
+```{r, warning = F, message = F}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
@@ -308,7 +308,7 @@ ggplot() +
 -------------
 
 
-```{r}
+```{r, warning = F, message = F}
 
 sp_ok_quakes <- SpatialPointsDataFrame(data = ok_quakes,
                           coords = ok_quakes[,c("longitude", "latitude")])
@@ -344,7 +344,7 @@ ggplot() +
 https://research.stlouisfed.org/fred2/series/DCOILWTICO/downloaddata
 
 
-```{r}
+```{r, warning = F, message = F}
 fname <- './data/stlouisfed-oil-prices.csv'
 if (!file.exists(fname)){
   curlstr <- paste("curl -s --data 'form%5Bnative_frequency%5D=Daily&form%5Bunits%5D=lin&form%5Bfrequency%5D=Daily&form%5Baggregation%5D=Average&form%5Bobs_start_date%5D=1986-01-02&form%5Bobs_end_date%5D=2015-08-24&form%5Bfile_format%5D=csv&form%5Bdownload_data_2%5D='", '-o', fname)
@@ -365,7 +365,7 @@ gasdata <- read.csv("./data/stlouisfed-oil-prices.csv", stringsAsFactors = F) %>
 
 
 
-```{r}
+```{r, warning = F, message = F}
 okquakes_weekly <- mutate(ok_quakes, week = floor_date(time, 'week'), panel = 'Quakes') %>%
   filter(year(time) >= 2008) %>%
   group_by(week) %>%
@@ -385,7 +385,7 @@ gasg <- gp + geom_line(data = gasdata, aes(x = week, y = avg_value), size = 0.5,
 ```
 
 
-```{r}
+```{r, warning = F, message = F}
 # http://stackoverflow.com/questions/10197738/add-a-footnote-citation-outside-of-plot-area-in-r
 
 annotations <- list(
@@ -429,21 +429,6 @@ grid.draw(p)
 
 
 
-<!--
-To render this file:
-library(rmarkdown)
-setwd("~/Dropbox/rprojs/ok-earthquakes-Rnotebook/")
-
-this_file <- 'chapter-4-geocorrelation.Rmd'
-render(this_file, output_dir = './builds',
-  html_document(toc = TRUE, self_contained = F))
-
-render(this_file, output_dir = './builds',
-  md_document(variant = "markdown_github",
-              preserve_yaml = TRUE))
--->
-
-
 The study, titled "Oklahoma's Recent Earthquakes and Saltwater Disposal," was funded by the Stanford Center for Induced and Triggered Seismicity, an affiliate program at the School of Earth, Energy & Environmental Sciences.
 
 
@@ -458,7 +443,7 @@ http://news.stanford.edu/news/2015/june/okla-quake-drilling-061815.html
 ## Trying Google Maps
 
 
-```{r}
+```{r, warning = F, message = F}
 library(ggmap)
 ok_goog_map <- get_googlemap(center = c(lon = -99.007, lat = 35.38905),  size = c(450,250), zoom = 6, scale = 2, maptype = 'hybrid',
 style = c(feature = "administrative.province", element = "labels", visibility = "off"))
@@ -466,7 +451,7 @@ style = c(feature = "administrative.province", element = "labels", visibility = 
 
 With points
 
-```{r}
+```{r, warning = F, message = F}
 ggmap(ok_goog_map, extent = 'panel') +
   geom_point(data = ok_quakes, aes(x = longitude, y = latitude), alpha = 0.2, shape = 4, colour = "red")
 ```
@@ -474,7 +459,7 @@ ggmap(ok_goog_map, extent = 'panel') +
 
 With hexbin:
 
-```{r}
+```{r, warning = F, message = F}
 ggmap(ok_goog_map, extent = 'panel') +
   stat_binhex(data = ok_quakes, aes(x = longitude, y = latitude, alpha = ..count..), bins = 30 ) +
   scale_fill_gradientn(colours=c("white","red")) +
@@ -485,14 +470,14 @@ ggmap(ok_goog_map, extent = 'panel') +
 Focus on Oklahoma City area:
 
 
-```{r}
+```{r, warning = F, message = F}
 okcity_goog_map  <- get_googlemap(center = c(lon = -97.437287, lat = 36.1815),  size = c(640,640), zoom = 9, scale = 2, maptype = 'hybrid',
 style = c(feature = "administrative.province", element = "labels", visibility = "off"))
 
 ```
 
 Hexbin
-```{r}
+```{r, warning = F, message = F}
 ggmap(okcity_goog_map) +
   stat_binhex(data = ok_quakes, aes(x = longitude, y = latitude, color = ..count..), bins = 30, fill = NA, alpha = 0.5 ) +
   scale_color_gradientn(colours=c("white","red")) +
@@ -520,3 +505,8 @@ http://earthquakes.ok.gov/what-we-know/earthquake-map/
 On April 21, earthquakes.ok.gov was launched:
 
 http://earthquakes.ok.gov/news/
+
+
+
+## The state of research
+
