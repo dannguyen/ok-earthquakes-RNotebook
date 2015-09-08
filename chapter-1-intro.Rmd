@@ -28,7 +28,7 @@ to be the result of natural stresses, since they are consistent with the regiona
 
 
 
-<span id="chapter-1-mark"></span>
+<span id="mark-chapter-1"></span>
 
 
 
@@ -51,7 +51,7 @@ It's incorrect to think of the USGS data as deriving from a monolithic and uncha
 >
 > As more and more seismographs are installed in the world, more earthquakes can be and have been located. However, the number of large earthquakes (magnitude 6.0 and greater) has stayed relatively constant.
 
-Is it possible that Oklahoma's recent earthquake swarm in Oklahoma is just the result of the recent installation of a batch of seismographs in Oklahoma? _Could be_ -- though I think it's likely the USGS would have mentioned [this in its informational webpages and documentation about the Oklahoma earthquakes](http://earthquake.usgs.gov/earthquakes/states/index.php?regionID=36). In [chapter 3](#chapter-3-mark), we'll try to use some arithmetic and estimation to address the "Oh, it's only because there's more sensors" possibility. But to keep things relatively safe and simple, we'll limit the scope of the historical data to about 20 years: __from 1995 to August 2015__. The number of sensors and technology may have changed in that span, but not as drastically as they have in even earlier decades. The [USGS has a page devoted to describing the source and caveats of its earthquake data](http://earthquake.usgs.gov/earthquakes/map/doc_aboutdata.php).
+Is it possible that Oklahoma's recent earthquake swarm in Oklahoma is just the result of the recent installation of a batch of seismographs in Oklahoma? _Could be_ -- though I think it's likely the USGS would have mentioned [this in its informational webpages and documentation about the Oklahoma earthquakes](http://earthquake.usgs.gov/earthquakes/states/index.php?regionID=36). In [chapter 3](#mark-chapter-3), we'll try to use some arithmetic and estimation to address the "Oh, it's only because there's more sensors" possibility. But to keep things relatively safe and simple, we'll limit the scope of the historical data to about 20 years: __from 1995 to August 2015__. The number of sensors and technology may have changed in that span, but not as drastically as they have in even earlier decades. The [USGS has a page devoted to describing the source and caveats of its earthquake data](http://earthquake.usgs.gov/earthquakes/map/doc_aboutdata.php).
 
 
 ### Getting the data
@@ -81,7 +81,7 @@ However, for our walkthrough, this disparity is minimized because we will be foc
 
 ## The U.S. Census Cartographic Boundary Shapefiles
 
-The USGS data has a `place` column, but it's not specific enough to be able to use in assigning earthquakes to U.S. states. So we need geospatial data, specifically, U.S. state boundaries. The [U.S. Census has us covered](#chapter-1-mark) with zipped-up simplified boundary data:
+The USGS data has a `place` column, but it's not specific enough to be able to use in assigning earthquakes to U.S. states. So we need geospatial data, specifically, U.S. state boundaries. The [U.S. Census has us covered](#mark-chapter-1) with zipped-up simplified boundary data:
 
 > The cartographic boundary files are simplified representations of selected geographic areas from the Census Bureau’s MAF/TIGER geographic database.   These boundary files are specifically designed for small scale thematic mapping.
 
@@ -97,7 +97,7 @@ The direct link to the Census's 2014 1:20,000,000 shape file is [here](https://w
 
 ### The limits of state boundaries
 
-The Census shapefiles are conveniently packaged for the analysis we want to do, though we'll find out in [Chapter 2](#chapter-2-mark) that there's a good amount of complexity in preparing geospatial boundary data for visualization.
+The Census shapefiles are conveniently packaged for the analysis we want to do, though we'll find out in [Chapter 2](#mark-chapter-2) that there's a good amount of complexity in preparing geospatial boundary data for visualization.
 
 But the bigger question is: Are state boundaries really the best way to categorize earthquakes? These boundaries are _political_ and have no correlation with the __seismic__ lines that earthquakes occur along.
 
@@ -117,11 +117,11 @@ But like the lines of political boundaries, the lines of a fault map don't just 
 
 > “We know more about the East African Rift than we know about the faults in the basement in Oklahoma.” In seismically quiet places, such as the Midwest, which are distant from the well-known fault lines between tectonic plates, most faults are, instead, cracks within a plate, which are only discovered after an earthquake is triggered. The O.G.S.’s Austin Holland has long had plans to put together two updated fault maps, one using the available published literature on Oklahoma’s faults and another relying on data that, it was hoped, the industry would volunteer; but, to date, no updated maps have been released to the public.
 
-As I'll cover in [chapter 4](#chapter-4-mark) of this walkthrough, things have obviously changed since the New Yorker's story, including the release of updated fault maps.
+As I'll cover in [chapter 4](#mark-chapter-4) of this walkthrough, things have obviously changed since the New Yorker's story, including the release of updated fault maps.
 
 
 ## About the Oklahoma Corporation Commission
 
 The OCC has many [relevant datasets from the drilling industry](http://www.occeweb.com/og/ogdatafiles2.htm), in particular, spreadsheets of the locations of UIC ([underground injection control](http://water.epa.gov/type/groundwater/uic/)) wells, i.e. where drilling waste water is injected into the earth for storage.
 
-Unfortunately, there's not a lot of easily-found documentation of this data, and a cursory examination shows that there are problems of typos and taxonomy. In [chapter 4](#chapter-4-mark), I attempt to map some of the UIC data. But I don't know enough about the data to make any useful observations. The [data/ directory](https://github.com/dannguyen/ok-earthquakes-RNotebook/tree/master/data) of this repo contains a few of the OCC files for future exploration; hopefully someone else can shed more light in their own walkthrough.
+Unfortunately, there's not a lot of easily-found documentation of this data, and a cursory examination shows that there are problems of typos and taxonomy. In [chapter 4](#mark-chapter-4), I attempt to map some of the UIC data. But I don't know enough about the data to make any useful observations. The [data/ directory](https://github.com/dannguyen/ok-earthquakes-RNotebook/tree/master/data) of this repo contains a few of the OCC files for future exploration; hopefully someone else can shed more light in their own walkthrough.

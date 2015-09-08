@@ -1,13 +1,14 @@
 ---
 title: Investigating Oklahoma's earthquake surge with R and ggplot2
 status: unfinished
-description: "A technical walkthrough of how to research, analyze, and visualize Oklahoma's earthquakes using R."
+description: "A data journalism walkthrough of how to research, analyze, and visualize Oklahoma's earthquakes using R."
 ---
 
-![OK google](./images/multi-year-OK-google-map-borderless.jpg)
+![Small multiple Google maps of Oklahoma M3.0+ earthquakes by year](./images/multi-year-OK-google-map-borderless.jpg)
 
 
-__Quick summary__: A four-part walkthrough exploring earthquake data in Oklahoma using R.
+__Quick summary__: This is a four-part walkthrough on how to collect, clean, analyze, and visualize earthquake data. While there is a lot of R code and charts, that's just a result of me wanting to practice ggplot2. The main focus of this guide is to practice purposeful research and numerical reasoning as a data journalist.
+
 
 __Quick nav__:
 
@@ -16,8 +17,7 @@ __Quick nav__:
 - [The repo containing the notebooks, code, and data](https://github.com/dannguyen/ok-earthquakes-RNotebook)
 - [The repo in a zip file](https://github.com/dannguyen/ok-earthquakes-RNotebook/archive/master.zip).
 
-
-The concepts of this walkthrough summed up in an animated GIF composed of charts created with ggplot2:
+The main findings of this walkthrough summed up in an animated GIF composed of charts created with ggplot2:
 
 ![Animated GIF](./images/optimized-movie-quakes-OK.gif)
 
@@ -25,11 +25,11 @@ The concepts of this walkthrough summed up in an animated GIF composed of charts
 <a id="chapter-summaries"></a>
 __The four chapters:__
 
-0. [Meta stuff](#chapter-0-mark) - A summary of what this walkthrough contains, the ideal intended audience, and technical details on how to configure your system and R setup similar to mine.
-1. [Background into Oklahoma's earthquakes](#chapter-1-mark) - An overview of the scientific and political debates after Oklahoma's earthquake activity reached a record high -- in number and in magnitude -- since 2010. And an overview of the main datasets we'll use for our analysis.
-2. [Basic R and ggplot2 concepts and examples](#chapter-2-mark) - In this chapter, we'll cover most of the basic R and ggplot2 conventions needed to do the necessary data-gathering/cleaning and visualizations in subsequent chapters.
-3. [Exploring the historical earthquake data since 1995](#chapter-3-mark) - We repeat the same techniques in chapter 2, except instead of one month's worth of earthquakes, we look at 20 years of earthquake data. The volume and scope of data requires different approaches in visualization and analysis.
-4. [Correlation, limitations, and known unknowns](#chapter-4-mark) - Though the significance of the chronological earthquake trend is obvious, that's not enough to show that drilling is the _cause_ of the earthquake surge.
+0. [Meta stuff](#mark-chapter-0) - A summary of what this walkthrough contains, the ideal intended audience, and technical details on how to configure your system and R setup similar to mine.
+1. [Background into Oklahoma's earthquakes](#mark-chapter-1) - An overview of the scientific and political debates after Oklahoma's earthquake activity reached a record high -- in number and in magnitude -- since 2010. And an overview of the main datasets we'll use for our analysis.
+2. [Basic R and ggplot2 concepts and examples](#mark-chapter-2) - In this chapter, we'll cover most of the basic R and ggplot2 conventions needed to do the necessary data-gathering/cleaning and visualizations in subsequent chapters.
+3. [Exploring the historical earthquake data since 1995](#mark-chapter-3) - We repeat the same techniques in chapter 2, except instead of one month's worth of earthquakes, we look at 20 years of earthquake data. The volume and scope of data requires different approaches in visualization and analysis.
+4. [Correlation, limitations, and known unknowns](#mark-chapter-4) - Though the significance of the chronological earthquake trend is obvious, that's not enough to show that drilling is the _cause_ of the earthquake surge.
 
 
 ### Key charts
@@ -56,23 +56,25 @@ __Full table of contents__
 {:toc}
 
 
-<a id="chapter-0-mark"></a>
+<a id="mark-chapter-0"></a>
 
 # Chapter 0: Meta stuff
 
 
-
-__Long summary:__
+## Long summary of this walkthrough
 
 This extremely verbose writeup consists of a series of R notebooks and aggregation of [journalism and research into the recent "swarm" of earthquake activity in Oklahoma](https://stateimpact.npr.org/oklahoma/tag/earthquakes/). It is now (and by "now", I mean [very recently](http://earthquakes.ok.gov/news/)) generally accepted by academia, industry, and the politicians, that the earthquakes are the result of drilling operations. So this walkthrough won't reveal anything new to those who have been following the news. But I created the walkthrough to provide a layperson's guide of how to go about researching the issue and also, how to create reproducible data process, including how to collect, clean, analyze, and visualize the earthquake data.
 
 These techniques and principles are general enough to apply to any investigative data process. I use the earthquake data as an example because it is about as clean and straightforward as datasets come. However, we'll find soon enough that it contains the same caveats and complexities that are inherent to all real-world datasets.
 
-__Spoiler alert.__ Let's be clear: 20 years of earthquake data is not remotely enough for amateurs nor scientists to make sweeping conclusions about the source of recent earthquake activity. So I've devoted a good part of [Chapter 4](#chapter-4-mark) to explaining the limitations of the data (and my knowledge) and pointing to resources that you can pursue on your own.
+__Spoiler alert.__ Let's be clear: 20 years of earthquake data is not remotely enough for amateurs nor scientists to make sweeping conclusions about the source of recent earthquake activity. So I've devoted a good part of [Chapter 4](#mark-chapter-4) to explaining the limitations of the data (and my knowledge) and pointing to resources that you can pursue on your own.
 
-##### About the code
+## Intended audience
 
-I explain as much of the syntax as I can in [Chapter 2](#chapter-2-mark), but it won't make sense if you don't have _some_ experience with ggplot2. The easiest way to follow along is clone the Github repo here:
+
+## About the code
+
+I explain as much of the syntax as I can in [Chapter 2](#mark-chapter-2), but it won't make sense if you don't have _some_ experience with ggplot2. The easiest way to follow along is clone the Github repo here:
 
 [https://github.com/dannguyen/ok-earthquakes-RNotebook](https://github.com/dannguyen/ok-earthquakes-RNotebook)
 

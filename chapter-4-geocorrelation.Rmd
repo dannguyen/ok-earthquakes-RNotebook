@@ -7,7 +7,7 @@ output:
     variant: markdown_github
 ---
 
-<span id="chapter-4-mark"></span>
+<a id="mark-chapter-4"></a>
 
 # Chapter 4: Correlation, limitations, and known unknowns
 
@@ -86,19 +86,14 @@ usgs_data <- read.csv(fn, stringsAsFactors = FALSE)
 Filter and mutate the data
 
 ```{r, warning = F, message = F}
-# Remove all non earthquakes and events
-# with magnitude less than 3.0:
+# Remove all non earthquakes and events with magnitude less than 3.0:
 quakes <- usgs_data %>%
           filter(mag >= 3.0, type == 'earthquake') %>%
           mutate(time = ymd_hms(time)) %>%
           mutate(date = as.Date(time)) %>%
-          mutate(year = year(time)) %>%
-          mutate(era = ifelse(year <= 2000, "1995-2000",
-            ifelse(year <= 2005, "2001-2005",
-            ifelse(year <= 2010, "2006-2010", "2011-2015"))))
+          mutate(year = year(time))
 ```
 
-```
 
 ```{r, warning = F, message = F}
 sp_quakes <- SpatialPointsDataFrame(data = quakes,
@@ -121,6 +116,11 @@ ok_map <- states_map[states_map$STUSPS == 'OK',]
 ```
 
 
+## Moving beyond earthquakes
+
+In chapter 3, we tried some initial maps before moving on to histograms, which are more effective for quantifying the frequency and number of earthquakes.
+
+But now that we're pretty well convinced that Oklahoma is facing unprecedented seismic activity, we need to examine the _locations_ of the earthquakes in order to make any kind of correlation between their occurrence and human activity. Let's revisit
 
 
 
@@ -163,7 +163,7 @@ injections_2013 <-  xl_2013 %>%
 ```
 
 
-Aggregate the wells by their unique identifier and create a `annual_volume` column:
+Aggregate the wells by their unique identifier (`API`) and spatial coordinates and create a `annual_volume` column. I also add a `count` column which, _theoretically_, should always be 12 or less, i.e. 12 _months_, assuming that each well puts out, at most, one monthly record for its injection activity. But that assumes a lot of things, such as no errors in the data entry process:
 
 
 ```{r, warning = F, message = F}
@@ -172,34 +172,55 @@ wells_2013 <-  injections_2013 %>%
     summarise(count = n(), annual_volume = sum(Volume))
 ```
 
-Some wells have 24 records. It appears to be a double count:
+
+Let's see how many of the aggregate well rows have more than 12 records in their grouping:
 
 
 ```{r, warning = F, message = F}
-filter(injections_2013, API == '35003220260000', Month == 'MAY') %>% select(Month, Volume)
+head(filter(wells_2013, count > 12))
 ```
 
-Sigh.
 
-Let's just average things.
+Some wells have 24 records in their count. Let's pick one of the `API` values at random:
 
 
 ```{r, warning = F, message = F}
-clean_wells_2013 <-  bind_rows(
-    filter(wells_2013, count <= 12),
-    filter(wells_2013, count > 12) %>%
-      mutate(annual_volume = annual_volume / (count / 12)))
+filter(injections_2013, API == '35003220190000', Month == 'MAY') %>% select(Month, Volume)
 ```
 
-How close are we to Walsh's estimate of 160 million barrels a month?
+Looks like a double count. But not all the overcounts are at 24 records:
+
+```{r, warning = F, message = F}
+filter(wells_2013, count > 12) %>%
+  group_by(count) %>%
+  summarise(num_of_wells = n()) %>%
+  arrange(count)
+```
+
+_Sigh._ Rather than do a proper investigation and cleaning of this anomaly, I propose this (mis)use of math: for wells that have a `count` greater than 12, divide their `annual_total` by the ratio of `count/12`. For example, a well with a `count` of __24__ would have its `annual_total` divided by __2__, i.e. `24 / 2`. We'll store this value in a new column, `adjusted_total`:
+
+```{r, warning = F, message = F}
+wells_2013 <- wells_2013 %>%
+  mutate(adjusted_volume = ifelse(count <= 12, annual_volume, annual_volume / (count / 12)))
+
+```
+
+The result of that mutation:
+
+```{r}
+wells_2013[wells_2013$API == '35003220190000', ]
+```
+
+
+Using the `adjusted_volume`, How close are we to Walsh's estimate of 160 million barrels a month?
 
 
 ```{r}
-100 * (160000000 - (sum(clean_wells_2013$annual_volume) / 12)) / 160000000
+100 * (160000000 - (sum(wells_2013$adjusted_volume) / 12)) / 160000000
 ```
 
 
-About 10 percent off. Well, at least we're in the same ballpark...This discrepancy seems reasonable given that I've done about zero data cleaning. 
+About 10 percent off. Well, at least we're in the same ballpark...This discrepancy seems reasonable given that I've given about zero effort to data cleaning...
 
 #### Spatial filtering
 
@@ -207,18 +228,19 @@ But there is one more thing we can do: There are typos in the `X` and `Y` column
 
 
 ```{r, warning = F, message = F}
-tmpdf <- as.data.frame(clean_wells_2013)
-sp_wells_2013 <-  SpatialPointsDataFrame(data = tmpdf,
-                          coords = tmpdf[, c("X", "Y")])
+gdf <- as.data.frame(wells_2013) # for some reason, grouped dataframes don't work
+sp_wells_2013 <-  SpatialPointsDataFrame(data = gdf,
+                          coords = gdf[, c("X", "Y")])
 sp_wells_2013@proj4string <- ok_map@proj4string
-# subset for wells in Oklahoma
-mapped_wells_2013 <- as.data.frame(sp_wells_2013[ok_map, ]) 
+# create a temp dataframe of the sp_wells_2013 rows and STUSPS, i.e. 'OK'
+xdf <- over(sp_wells_2013, ok_map[, 'STUSPS'])
+wells_2013$is_OK <- xdf$STUSPS == 'OK'
 ```
 
 _Now_ let's calculate the average injection volume per month and find how much we're off compared to Walsh's estimation of 160 million barrels a month:
 
 ```{r}
-100 * (160000000 - (sum(mapped_wells_2013$annual_volume) / 12)) / 160000000
+100 * (160000000 - (sum(filter(wells_2013, is_OK)$adjusted_volume) / 12)) / 160000000
 ```
 
 Only 1.6% off. Not bad for doing the most blunt and shallow kind of data cleaning.
@@ -227,8 +249,9 @@ But how different is the volume of the mappable wells compared to the non-mappab
 
 
 ```{r}
-100 * (sum(mapped_wells_2013$annual_volume) - 
-         sum(clean_wells_2013$annual_volume)) / 
+# TKTKTK
+100 * (sum(mapped_wells_2013$annual_volume) -
+         sum(clean_wells_2013$annual_volume)) /
   sum(clean_wells_2013$annual_volume)
 ```
 
@@ -269,12 +292,11 @@ wells_2012 <-  injections_2012 %>%
     summarise(count = n(), annual_volume = sum(Volume))
 ```
 
+Perform the cleaning/averaging for calculating `adjusted_volume`:
 
 ```{r, warning = F, message = F}
-clean_wells_2012 <-  bind_rows(
-    filter(wells_2012, count <= 12),
-    filter(wells_2012, count > 12) %>%
-      mutate(annual_volume = annual_volume / (count / 12)))
+wells_2012 <- wells_2012 %>%
+  mutate(adjusted_volume = ifelse(count <= 12, annual_volume, annual_volume / (count / 12)))
 ```
 
 
@@ -284,28 +306,28 @@ So the big problem with the 2012 data is that there is no `X` or `Y` column, i.e
 
 But we can fix that by joining `clean_wells_2012` to `mapped_wells_2013`, the latter of which _does_ contain geospatial data. Both tables contain an `API` column. But let me be clear: it is a _major_ assumption to think that the API values, whatever they stand for, aren't also filled with typos or nonsense data.
 
-For SQL fans, the dplyr package has a conveniently named __left_join()__ function. If you're fuzzy on how left join's work, remember that it preserves all the records on the "left" side -- in this case, `clean_wells_2012`. So after doing the join, we perform a filter to remove rows in which `X` (or `Y`) is NA:
+For SQL fans, the dplyr package has a conveniently named __left_join()__ function. If you're fuzzy on how left joins work, remember that it preserves all the records on the "left" side -- in this case, `wells_2012`. For wells in `wells_2012` that don't have a corresponding match of `API` in `wells_2013`, the columns `X`, `Y`, and `is_OK` will be NA:
 
 
 ```{r}
-mapped_wells_2012 <- clean_wells_2012 %>%
-  left_join(select(as.data.frame(mapped_wells_2013), API, X, Y), by = 'API') %>%
-  filter(!is.na(X))
+wells_2012 <- wells_2012 %>%
+  left_join(select(as.data.frame(wells_2013), API, X, Y, is_OK), by = 'API') %>%
+  mutate(is_OK = !is.na(is_OK))
 ```
 
-Let's calculate the monthly average for 2012:
+Let's calculate the monthly average for 2012 for the mappable wells:
 
 ```{r}
-sum(mapped_wells_2012$annual_volume) / 12 
+sum(filter(wells_2012, is_OK)$adjusted_volume) / 12
 ```
 
 And how much did we lose by removing wells in 2012 that didn't have a matching API in 2013?
 
 
 ```{r}
-100 * (sum(mapped_wells_2012$annual_volume) - 
-         sum(clean_wells_2012$annual_volume)) / 
-  sum(clean_wells_2012$annual_volume)
+100 * (sum(wells_2012$adjusted_volume) -
+         sum(filter(wells_2012, is_OK)$adjusted_volume)) /
+  sum(wells_2012$adjusted_volume)
 ```
 
 That's more than a rounding error within the 2012 data...but moving on to 2011.
@@ -342,7 +364,7 @@ injections_2011 <- xl_2011[, c(1:26)] %>%
            !is.na(Volume))
 ```
 
-Like 2012, there are no `X` and `Y`  columns. So we repeat 2012's filtering and joining process: 
+Like 2012, there are no `X` and `Y`  columns. So we repeat 2012's filtering and joining process:
 
 ```{r, warning = F, message = F}
 # sum the wells
@@ -350,22 +372,20 @@ wells_2011 <-  injections_2011 %>%
     group_by(ReportYear, API) %>%
     summarise(count = n(), annual_volume = sum(Volume))
 # clean the wells
-clean_wells_2011 <-  bind_rows(
-    filter(wells_2011, count <= 12),
-    filter(wells_2011, count > 12) %>%
-      mutate(annual_volume = annual_volume / (count / 12)))
+wells_2011 <- wells_2011 %>%
+  mutate(adjusted_volume = ifelse(count <= 12, annual_volume, annual_volume / (count / 12)))
 # geo-join the wells
-mapped_wells_2011 <- clean_wells_2011 %>%
-  left_join(select(as.data.frame(mapped_wells_2013), API, X, Y), by = 'API') %>%
-  filter(!is.na(X))
+wells_2011 <- wells_2011 %>%
+  left_join(select(as.data.frame(wells_2013), API, X, Y, is_OK), by = 'API') %>%
+  mutate(is_OK = !is.na(is_OK))
 ```
 
-Let's calculate the percent difference between the mappable and non-mappable wells:
+Again, let's calculate the percent difference between the mappable and non-mappable wells:
 
 ```{r}
-100 * (sum(mapped_wells_2011$annual_volume) - 
-         sum(clean_wells_2011$annual_volume)) / 
-  sum(clean_wells_2011$annual_volume)
+100 * (sum(wells_2011$adjusted_volume) -
+         sum(filter(wells_2011, is_OK)$adjusted_volume)) /
+  sum(wells_2011$adjusted_volume)
 ```
 
 It's roughly the same difference as found in 2012. Meh, moving on.
@@ -385,7 +405,7 @@ if (!file.exists(fname)){
 xl_2006_2010 <- read_excel(fname)
 ```
 
-You can run `names(xl_2006_2010)` yourself, but the upshot is that this data file is much simpler than what we have so far with only 10 columns. Each row represents an annual measurement of volume, which saves us the time of aggregating it ourselves. 
+You can run `names(xl_2006_2010)` yourself, but the upshot is that this data file is much simpler than what we have so far with only 10 columns. Each row represents an annual measurement of volume, which saves us the time of aggregating it ourselves.
 
 Unlike the other datasets, there is a `FLUID_TYPE` column which very _unhelpfully_ contains values such as `"S"` and `""`:
 
@@ -398,36 +418,45 @@ Since saltwater injections make up the vast majority of UIC wells, I'm just goin
 
 ```{r}
 # rename the columns
-names(xl_2006_2010) <- c('API_COUNTY', 'API', 'LEASE_NAME', 'WELL_NUMBER', 'Y', 'X', 'ReportYear', 'FLUID_TYPE', 'PACKERDPTH', 'annual_volume')
-# filter the data
-clean_wells_2006_2010 <- xl_2006_2010 %>%
-    mutate(annual_volume = as.numeric(annual_volume),
-           API = as.character(API), ReportYear = as.numeric(ReportYear)) %>%
-    filter(!is.na(annual_volume), !is.na(X)) %>%
-    select(API, X, Y, ReportYear, annual_volume)
+names(xl_2006_2010) <- c('API_COUNTY', 'API', 'LEASE_NAME', 'WELL_NUMBER', 'Y', 'X', 'ReportYear', 'FLUID_TYPE', 'PACKERDPTH', 'sub_annual_volume')
 ```
 
-Since this data is already aggregated by year, we can skip the summarization step. And since it comes with `X` and `Y`, we don't need to do a table join with `mapped_wells_2013`. But we do need to repeat the spatial filtering with `ok_map`:
+Since this data is already aggregated by year, we _could_ skil the summarization step. But -- surprise, surprise -- it turns out there are multiple annual saltwater injection records per well. And it doesn't appear that the records are just duplicates. So, rather than calculate an average, I set `adjusted_volume` to be the biggest (i.e. `max()`) value of the duplicate records:
+
+```{r}
+# filter the data
+wells_2006_2010 <- xl_2006_2010 %>%
+    mutate(sub_annual_volume = as.numeric(sub_annual_volume),
+           API = paste(as.character(API_COUNTY), as.character(API), sep = ''), ReportYear = as.numeric(ReportYear)) %>%
+    group_by(API, X, Y, ReportYear) %>%
+    summarise(count = n(), annual_volume = sum(sub_annual_volume), adjusted_volume = max(sub_annual_volume))
+```
+
+
+
+
+Since the 2006-2010 data comes with `X` and `Y`, we don't need to do a table join with `wells_2013`. But we do need to repeat the spatial filtering with `ok_map`:
 
 
 ```{r, warning = F, message = F}
-tmpdf <- as.data.frame(clean_wells_2006_2010)
-sp_wells_2006_2010 <-  SpatialPointsDataFrame(data = tmpdf,
-                          coords = tmpdf[, c("X", "Y")])
+gdf <- as.data.frame(wells_2006_2010)
+sp_wells_2006_2010 <-  SpatialPointsDataFrame(data = gdf,
+                          coords = gdf[, c("X", "Y")])
 sp_wells_2006_2010@proj4string <- ok_map@proj4string
-# subset for wells in Oklahoma
-mapped_wells_2006_2010 <- as.data.frame(sp_wells_2006_2010[ok_map, ]) 
+# create a temp dataframe of the sp_wells_2013 rows and STUSPS, i.e. 'OK'
+xdf <- over(sp_wells_2006_2010, ok_map[, 'STUSPS'])
+wells_2006_2010$is_OK <- xdf$STUSPS == 'OK'
 ```
 
 Let's calculate the difference between mapped and non-mappable wells:
 
 ```{r}
-100 * (sum(mapped_wells_2006_2010$annual_volume) - 
-         sum(clean_wells_2006_2010$annual_volume)) / 
-  sum(clean_wells_2011$annual_volume)
+100 * (sum(wells_2006_2010$adjusted_volume) -
+         sum(filter(wells_2006_2010, is_OK)$adjusted_volume)) /
+  sum(wells_2006_2010$adjusted_volume)
 ```
 
-Less than 3 hundredths of a percent, not bad! Though that doesn't help us with the discrepencies in years 2011, 2012, and 2013...
+Less than a single percent. That's nice. Though that doesn't help us with the discrepencies in years 2011, 2012, and 2013...
 
 
 ### All the UIC data together now
@@ -435,9 +464,9 @@ Less than 3 hundredths of a percent, not bad! Though that doesn't help us with t
 We can now create a data frame of annual saltwater injection volumes for 2006 to 2013. All that grunt work makes this collation quite easy. I use dplyr's __bind_rows()__ function, which I believe is just a wrapper around __rbind()__. Some of the wells have typos in the `ReportYear`, so we apply a filter to remove all years greater than 2013:
 
 ```{r}
-all_mapped_wells <- bind_rows(mapped_wells_2013, 
-                       mapped_wells_2012, 
-                       mapped_wells_2011, 
+all_mapped_wells <- bind_rows(mapped_wells_2013,
+                       mapped_wells_2012,
+                       mapped_wells_2011,
                        mapped_wells_2006_2010) %>%
                     filter(ReportYear <= 2013)
 ```
@@ -449,17 +478,17 @@ Now let's make a histogram:
 ```{r}
 ggplot(data = group_by(all_mapped_wells, ReportYear)
                           %>% summarize(total_volume = sum(annual_volume)),
-        aes(x = ReportYear, y = total_volume)) + 
-  geom_bar(stat = 'identity') + 
+        aes(x = ReportYear, y = total_volume)) +
+  geom_bar(stat = 'identity') +
   ggtitle("Mappable wells")
 ```
 
 Let's look at the difference between mappable and cleaned:
 
 ```{r}
-all_cleaned_wells <- bind_rows(clean_wells_2013, 
-                       clean_wells_2012, 
-                       clean_wells_2011, 
+all_cleaned_wells <- bind_rows(clean_wells_2013,
+                       clean_wells_2012,
+                       clean_wells_2011,
                        clean_wells_2006_2010) %>%
                     filter(ReportYear <= 2013)
 ```
@@ -471,13 +500,13 @@ Compare the two:
 ```{r}
 ggplot(data = group_by(all_cleaned_wells, ReportYear)
                           %>% summarize(total_volume = sum(annual_volume)),
-        aes(x = ReportYear, y = as.integer(total_volume / 1000000))) + 
-  geom_bar(stat = 'identity', fill = "red") + 
+        aes(x = ReportYear, y = as.integer(total_volume / 1000000))) +
+  geom_bar(stat = 'identity', fill = "red") +
   geom_bar(stat = 'identity',
            data = group_by(all_mapped_wells, ReportYear)
                           %>% summarize(total_volume = sum(annual_volume)),
            fill = "black"
-           ) + 
+           ) +
   scale_y_continuous(labels = comma, expand = c(0, 0)) +
   ggtitle("Mappable vs cleaned wells")
 ```
@@ -489,8 +518,8 @@ Summarise by location
 
 
 ```{r}
-q1 <- ggplot(data = all_wells %>%
-         group_by(Y, ReportYear) %>% summarize(total = sum(total_volume)),
+q1 <- ggplot(data = all_mapped_wells %>%
+         group_by(Y, ReportYear) %>% summarize(total = sum(annual_volume)),
        aes(x = factor(ReportYear), y = total, order = desc(Y >= 36),
            fill = Y >= 36)) + geom_bar(stat = 'identity') +
         scale_fill_manual(values = c("#EEEEEE", "#FF6600"), labels = c("Below 36.5", "Above 36.5")) +
@@ -525,10 +554,10 @@ Facet wrap the wells:
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
-  geom_point(data = filter(all_wells, total_volume <= 360000),
+  geom_point(data = filter(all_mapped_wells, annual_volume <= 360000),
              aes(x = X, y = Y),
              alpha = 0.3, shape = 1, color = 'yellow') +
-  geom_point(data = filter(all_wells, total_volume >= 360000),
+  geom_point(data = filter(all_mapped_wells, annual_volume >= 360000),
              aes(x = X, y = Y),
              alpha = 0.3, shape = 1, color = 'purple') +
   # geom_point(data = filter(ok_quakes, year >= 2012), aes(x = longitude, y = latitude),

@@ -13,13 +13,13 @@ output:
 
 ---
 
-<span id="chapter-2-mark"></span>
+<span id="mark-chapter-2"></span>
 
 # Chapter 2: Basic R Concepts
 
 This chapter is focused on R syntax and concepts for working with data frames and generating visualizations via ggplot2. For demonstration purposes, I use a subset of the U.S. Geological Survey's earthquake data (records for August 2015). Chapters 3 and 4 will repeat the same concepts except with earthquake data spanning back to 1995.
 
-If you're pretty comfortable with R, you can go ahead and skip to [Chapter 3](#chapter-3-mark)
+If you're pretty comfortable with R, you can go ahead and skip to [Chapter 3](#mark-chapter-3)
 
 
 ## Loading the libraries and themes

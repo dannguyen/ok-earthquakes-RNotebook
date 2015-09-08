@@ -2,7 +2,7 @@
 title: "Chapter 3: Exploring the Historical Data"
 ---
 
-<span id="chapter-3-mark"></span>
+<span id="mark-chapter-3"></span>
 
 
 # Chapter 3: Exploring the Historical Data
@@ -218,9 +218,12 @@ ok_quakes <- filter(states_quakes, is_OK)
 ok_map <- states_map[states_map$STUSPS == 'OK',]
 ```
 
+
+<a id="mark-small_multiples_oklahoma_map_quakes"></a>
+
 Mapping earthquakes by era, for Oklahoma:
 
-```{r, small_multiples_oklahoma_map_quakes, fig.cap = "Small Multiples Oklahoma"}
+```{r, small_multiples_oklahoma_map_quakes, fig.cap = "Small Multiples Oklahoma", message = F}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
   geom_point(data = ok_quakes, aes(x = longitude, y = latitude), shape = 4,  alpha = 0.5, color = "red") +
@@ -228,7 +231,7 @@ ggplot() +
   guides(colour = guide_legend(override.aes = list(alpha = 1))) +
   theme_dan_map() +
   facet_wrap(~ era) +
-  ggtitle("M3.0+ earthquakes in Oklahoma by time period")
+  ggtitle("Oklahoma M3.0+ earthquakes by time period")
 ```
 
 
@@ -348,7 +351,7 @@ ggplot(data = firstweek_nov_2011_quakes, aes(x = time, y = mag)) +
 
 As [we saw in the previous chart](#mark-ok_1995_to_aug_2015_by_month), things quieted down after November 2011, up until mid-2013. So, again, it's _possible_ that maybe the general rise of Oklahoma earthquakes is due to a bunch of newer/better seismic sensors since 2013. However, this is only a possiblity if we were doing our analysis in a vaccum divorced from reality. Practically speaking, the USGS likely does not go on a state-specific sensor-installation spree, within a period of two years, in such a way that massively distorts the count of M3.0+ earthquakes. However, in the next section, we'll step back and see how unusual Oklahoma's spike in activity is compared to every other U.S. state.
 
-But as a sidenote, the big M5.6 earthquake in November 2011, followed by a period of relative inactivity (at least compared to 2014) does not, on the face of it, support a theory of man-made earthquakes. After all, unless drilling operations just stopped in 2011, we might expect a general uptick in earthquakes through 2012 and 2013. But remember that we're dealing with a very simplified subset of the earthquake data; in [chapter 4](#chapter-4-mark), we address this "quiet" period in greater detail.
+But as a sidenote, the big M5.6 earthquake in November 2011, followed by a period of relative inactivity (at least compared to 2014) does not, on the face of it, support a theory of man-made earthquakes. After all, unless drilling operations just stopped in 2011, we might expect a general uptick in earthquakes through 2012 and 2013. But remember that we're dealing with a very simplified subset of the earthquake data; in [chapter 4](#mark-chapter-4), we address this "quiet" period in greater detail.
 
 
 
