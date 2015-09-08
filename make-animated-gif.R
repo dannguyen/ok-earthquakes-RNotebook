@@ -104,18 +104,18 @@ make_quake_histogram <- function(yrmth){
     scale_fill_manual(values = c("#FF6600", "grey")) +
     # annotate year marks
     annotate("text", x = "2005-01", y = 6, size = rel(1.5), hjust = 0.0,
-               label = "2005", fontface = 'bold', family = "Gill Sans MT") +
+               label = "2005", fontface = 'bold', family = dan_base_font()) +
     annotate("text", x = "2010-01", y = 6, size = rel(1.5), hjust = 0.0,
-               label = "2010", fontface = 'bold', family = "Gill Sans MT") +
+               label = "2010", fontface = 'bold', family = dan_base_font()) +
     annotate("text", x = "2015-01", y = 6, size = rel(1.5), hjust = 0.0,
-               label = "2015", fontface = 'bold', family = "Gill Sans MT") +
+               label = "2015", fontface = 'bold', family = dan_base_font()) +
     annotate("text", x = yrmth, y = 25, size = rel(1.3), hjust = x_lbl_hjust,
-               label = this_title, lineheight = 0.8, family = "Gill Sans MT") +
+               label = this_title, lineheight = 0.8, family = dan_base_font()) +
     # annotate chart text
-    annotate("text", x = "2005-01", y = 100, size = rel(1.5), hjust = 0, family = "Gill Sans MT",
+    annotate("text", x = "2005-01", y = 100, size = rel(1.5), hjust = 0, family = dan_base_font(),
                label = c("Earthquakes of at least magnitude 3.0\nin the contiguous United States.\n\nData from the U.S. Geological Survey.\nChart by Dan Nguyen @dancow\nStanford Computational Journalism Lab")
             ) +
-    annotate("text", x = "2013-03", y = 50, size = rel(1.5), hjust = 0, family = "Gill Sans MT",
+    annotate("text", x = "2013-03", y = 50, size = rel(1.5), hjust = 0, family = dan_base_font(),
                label = "Oklahoma's portion of earthquakes\nis colored in orange."
             ) +
 

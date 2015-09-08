@@ -285,7 +285,7 @@ ok_1995_to_aug_2015_by_month <- ggplot(data = filter(ok_quakes, year >= 2008),
           breaks = mbreaks, position = 'identity', fill = 'red') +
   scale_x_date(breaks = date_breaks("year"), labels = date_format("%Y")) +
   scale_y_continuous(expand = c(0, 0)) +
-  annotate(geom = "text", x = as.Date("2011-11-01"), y = 50, size = rel(4.5), vjust = 0.0, color = "#DD6600", family = "Gill Sans MT",
+  annotate(geom = "text", x = as.Date("2011-11-01"), y = 50, size = rel(4.5), vjust = 0.0, color = "#DD6600", family = dan_base_font(),
            label = "November 2011, 10:53 PM\nRecord M5.6 earthquake near Prague, Okla.") +
   ggtitle("Oklahoma M3+ earthquakes since 2008, by month")
 # plot the chart
@@ -340,7 +340,7 @@ ggplot(data = firstweek_nov_2011_quakes, aes(x = time, y = mag)) +
   ylab("Magnitude") +
   ggtitle("M3.0+ earthquakes in Oklahoma, first week of November 2011") +
   annotate("text", x = big_q_time, y = 5.6, hjust = -0.1, size = 4,
-           label = "M5.6 earthquake near Prague\n10:53 PM on Nov. 5, 2011", family = "Gill Sans MT") +
+           label = "M5.6 earthquake near Prague\n10:53 PM on Nov. 5, 2011", family = dan_base_font()) +
   theme(panel.grid.major.x = element_line(linetype = 'dotted', color = 'black'),
         axis.title = element_text(color = "black"), axis.title.x = element_blank())
 
