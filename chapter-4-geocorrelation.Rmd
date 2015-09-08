@@ -147,10 +147,9 @@ The Census boundaries have worked nicely for our charting. But they lack geograp
 ```{r, ok_stamen_map_base, warning = F, message = F, cache = TRUE, cache.path = "/tmp/rstudio-cache/ok-earthquakes-4"}
 ok_bbox <- c( left = -103.3, right = -94.2, bottom = 33.5, top = 37.1)
 ok_stamen_map <- get_stamenmap(bbox = ok_bbox, zoom = 7, maptype =  "toner", crop = T)
-
 gg_ok_map <- ggmap(ok_stamen_map) +
              geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
-                           fill = NA, color = "#884400")
+                           fill = NA, color = "#222222")
 
 gg_ok_map
 ```
@@ -161,7 +160,7 @@ Rather than overlaying the earthquakes as dots, let's use hexbinning so that we 
 gg_ok_map +
   stat_binhex(data = filter(ok_quakes_2010_2015, year == 2011 | year == 2015), aes(x = longitude, y = latitude, color = ..count..), bins = 40, fill = NA) +
   guides(fill = F) +
-  scale_color_gradientn(colours=c("yellow","red")) +
+  scale_color_gradientn(colours=c("gray","red")) +
   facet_wrap(~ year, ncol = 1) +
   ggtitle("Oklahoma M3.0+ earthquake density, 2011 and 2015") +
   theme_dan_map()

@@ -47,32 +47,36 @@ library(ggmap)
 
 ### Customizing the themes
 
-This is entirely optional. You can view my [ggplot theme script and copy it from here](https://github.com/dannguyen/ok-earthquakes-RNotebook/blob/master/myslimthemes.R), and then make it locally available to your scripts (e.g. `./myslimthemes.R`). Or, just don't use them when copying the rest of my code (all of the calls begin with `theme_dan...`).
+This is entirely optional, though it will likely add some annoying roadblocks for everyone trying to follow along. There's not much to theming in ggplot2: just remember a shit-ton of syntax and have a lot of patience. You can view my [ggplot theme script and copy it from here](https://github.com/dannguyen/ok-earthquakes-RNotebook/blob/master/myslimthemes.R), and then make it locally available to your scripts (e.g. `./myslimthemes.R`), so that you can source them as I do in each of my scripts: 
 
 ```{r, message = FALSE, warning = FALSE}
 source("./myslimthemes.R")
 theme_set(theme_dan())
 ```
 
+Or, just don't use them when copying the rest of my code. All of the theme calls begin with `theme_dan` or `dan`. One dependency that might cause a few problems is the use of the [extrafont](https://github.com/wch/extrafont) package, which I use to set the default font to [Gill Sans](https://en.wikipedia.org/wiki/Gill_Sans). I *think* I set it up so that systems without Gill Sans _or_ extrafont will just throw a warning message. But I didn't spend too much time testing that.
+
 
 ## Downloading the data
 
-There are two data files we need:
+For this chapter, we use two data files:
 
 - __[A feed of earthquake reports in CSV format from the U.S. Geological Survey](http://earthquake.usgs.gov/earthquakes/feed/v1.0/csv.php).__ For this section, we'll start by using the ["Past 30 Days - All Earthquakes"](http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.csv) feed, which can be downloaded at this URL:
 
-    http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.csv
+    [http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.csv](http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.csv)
 
 - __[Cartographic boundary shapefiles for U.S. state boundaries, via the U.S. Census](https://www.census.gov/geo/maps-data/data/tiger-cart-boundary.html)__. The listing of state boundaries can be [found here](https://www.census.gov/geo/maps-data/data/cbf/cbf_state.html). There are several levels of detail; the resolution of `1:20,000,000` is good enough for our purposes:
 
-    http://www2.census.gov/geo/tiger/GENZ2014/shp/cb_2014_us_state_20m.zip
+    [http://www2.census.gov/geo/tiger/GENZ2014/shp/cb_2014_us_state_20m.zip](http://www2.census.gov/geo/tiger/GENZ2014/shp/cb_2014_us_state_20m.zip)
 
 
-If you're following along many years from now and the above links no longer work, the [Github repo for this walkthrough](https://github.com/dannguyen/ok-earthquakes-RNotebook) contains copies of the raw files for you to practice on. You can either just clone this repo to get the files. Or download them here (these URLs are subject to the whims of Github's framework and may change down the road):
+If you're following along many years from now and the above links no longer work, the [Github repo for this walkthrough](https://github.com/dannguyen/ok-earthquakes-RNotebook) contains copies of the raw files for you to practice on. You can either just clone this repo to get the files. Or download them from Github's raw file storage &ndash; these URLs are subject to the whims of Github's framework and may change down the road:
 
 - [https://raw.githubusercontent.com/dannguyen/ok-earthquakes-RNotebook/master/data/all_month.csv](https://raw.githubusercontent.com/dannguyen/ok-earthquakes-RNotebook/master/data/all_month.csv)
 - [https://raw.githubusercontent.com/dannguyen/ok-earthquakes-RNotebook/master/data/cb_2014_us_state_20m.zip](https://raw.githubusercontent.com/dannguyen/ok-earthquakes-RNotebook/master/data/cb_2014_us_state_20m.zip)
 
+
+The easiest thing is to just [clone the repo](https://github.com/dannguyen/ok-earthquakes-RNotebook) or download and unpack the [zip file of this repo](https://github.com/dannguyen/ok-earthquakes-RNotebook/archive/master.zip).
 
 
 First we create a data directory to store our files:
@@ -111,7 +115,6 @@ download.file(url, fname)
 ```
 
 
-
 The standard __read.csv()__ function can be used to convert the CSV file into a data frame, which I store into a variable named `usgs_data`:
 
 ```{r, message = FALSE, warning = FALSE}
@@ -134,18 +137,26 @@ The standard way to transform a data frame column looks like this:
 usgs_data$time <- ymd_hms(usgs_data$time)
 ```
 
-However, I'll often use the __mutate()__ function from the __dplyr__ package:
+However, I'll more frequently use the __mutate()__ function from the __dplyr__ package:
 
-
-```{r}
+```{r, eval = FALSE}
 usgs_data <- mutate(usgs_data, time =  ymd_hms(time))
 ```
 
-__Note:__ In subsequent chapters, I convert the `time` attribute with the standard `as.Date()` function and use lubridate for other conversions.
+And because dplyr makes use of the piping convention from the __magrittr__ package, I'll often write the above snippet like this:
+
+```{r, message = F, warning = F}
+usgs_data <- usgs_data %>% mutate(time =  ymd_hms(time))
+```
+
+
 
 
 
 ### Download and read the map data
+
+Let's download the U.S. state boundary data. This also comes in a zip file that we download and unpack:
+
 
 ```{r, message = FALSE, warning = FALSE}
 url <- "http://www2.census.gov/geo/tiger/GENZ2014/shp/cb_2014_us_state_20m.zip"
@@ -157,19 +168,14 @@ if (!file.exists(fname)){
 unzip(fname, exdir = "./data/shp")
 ```
 
-Inside the `data/` directory should be a subdirectory named `shp/` with a variety of data files. Using the __rgdal__ library, we use the `readOGR()` command to read the shape file, convert it to a __SpatialPolygonsDataFrame__-type object, and assign it to the variable `us_map`:
+The `unzip` command unpacks a list of files into the `data/shp/` subdirectory. We only care about the one named `cb_2014_us_state_20m.shp`. To read that file into a __SpatialPolygonsDataFrame__-type object, we use the __rgdal__ library's __readOGR()__ command and assign the result to the variable `us_map`:
 
 ```{r, message = FALSE, warning = FALSE, results = "hide"}
 us_map <- readOGR("./data/shp/cb_2014_us_state_20m.shp", "cb_2014_us_state_20m")
 ```
 
+At this point, we've created two variables, `usgs_data` and `us_map`, which point to data frames for the earthquakes and the U.S. state boundaries, respectively. We'll be building upon these data frames, or more specifically, creating _subsets_ of their data for our analyses and visualizations.
 
-
-
-Going forward, we can work knowing that `usgs_data` and `us_map` contain data frames for the earthquakes and the U.S. state boundaries, respectively.
-
-
-## Examining the earthquake data
 
 Let's count how many earthquake records there are in a month's worth of USGS earthquake data:
 
@@ -177,8 +183,11 @@ Let's count how many earthquake records there are in a month's worth of USGS ear
 nrow(usgs_data)
 ```
 
+That's a nice big number with almost no meaning. We want to know how _big_ these earthquakes were, where they hit, and how many of the big ones hit. To go beyond this summary number, we turn to data visualization.
 
-An initial attempt at visualization might use a scatterplot, in which the each earthquake is plotted by its time and magnitude on the x- and y-axis, respectively:
+## A quick introduction to simple charts in ggplot2
+
+A natural first attempt at visualization is to make a __scatterplot__ of the earthquake data, in which each earthquake is plotted by its time along the x-axis and its magnitude on the y-axis:
 
 
 ```{r, overplotted_earthquakes, message = FALSE, warning = FALSE}
@@ -186,11 +195,12 @@ ggplot(usgs_data, aes(x = time, y = mag)) +
   geom_point() +
   scale_x_datetime() +
   ggtitle("Worldwide seismic events for August 2015")
-
 ```
 
 
-With so many earthquake events, we have a problem of __overplotting__: Events of similar magnitude that occur close to each other chronologically will overlap as dots. One way to fix this is to change the shape of the dots and increase their transparency:
+This ends up being a bad idea. With so many earthquake events, we run into the problem of __overplotting__: Dots representing earthquakes of similar magnitude and time will overlap and obscure each other. 
+
+One way to fix this is to change the shape of the dots and increase their transparency, i.e. _decrease_ their __alpha__:
 
 ```{r, overplotted_earthquakes_with_alpha, message = FALSE, warning = FALSE}
 ggplot(usgs_data, aes(x = time, y = mag)) +
@@ -200,17 +210,126 @@ ggplot(usgs_data, aes(x = time, y = mag)) +
 ```
 
 
-That's a little better. But there are just too many points for us to visually process. For example, we can tell that there are more earthquakes in the magnitude range of 0 to 2, but there's too much visual noise to quantify the difference.
+That's a little better, but there are just too many points for us to visually process. For example, we can vaguely tell that there seem to be more earthquakes of magnitudes between 0 and 2. But we can't accurately quantify the difference.
 
-So let's use a __histogram__ to group the earthquakes by nearest integer:
+Having too much data to sensibly plot is going to be a major recurring theme for the entirety of this walkthrough. Hopefully the examples in this chapter broaden your techniques and ways of thinking when it comes to organizing data.
 
-```{r, histogram_quakes_rounded_integer, message = FALSE, warning = FALSE}
-# I use a factor to make neater-looking bars
-ggplot(usgs_data, aes(x = factor(round(mag)))) +
-  geom_histogram(binwidth = 1) +
-  scale_y_continuous(expand = c(0, 0)) + # to remove margins from bottom of plot
-  ggtitle("Worldwide earthquakes by magnitude, rounded to nearest integer")
+### Fun with histograms
+
+In this scenario -- and most scenarios, actually --the best tactic is to go for something __simple__: A bar chart ([histogram](http://docs.ggplot2.org/current/geom_histogram.html)) is the most straightforward way to show _how many_ earthquakes fall within a magnitude range.
+
+Below, I simply organize the earthquakes into "buckets" by rounding them to the nearest integer:
+
+
+```{r, aug_2015_histogram_quakes_rounded_integer_simple, message = FALSE, warning = FALSE}
+ggplot(usgs_data, aes(x = round(mag))) +
+  geom_histogram(binwidth = 1) 
 ```
+
+The same chart, but with some polishing of its style. The `color` parameter for `geom_histogram()` allows us to create an outline to visually separate the bars:
+
+
+```{r, aug_2015_histogram_quakes_rounded_integer_styled, message = FALSE, warning = FALSE}
+ggplot(usgs_data, aes(x = round(mag))) +
+  geom_histogram(binwidth = 1, color = "white") +
+  # this removes the margin between the plot and the chart's bottom, and 
+  # formats the y-axis labels into something more human readable:
+  scale_y_continuous(expand = c(0, 0), labels = comma) + 
+  ggtitle("Worldwide earthquakes by magnitude, rounded to nearest integer\nAugust 2015")
+```
+
+The tradeoff for the histogram's clarity is a loss in granularity. In some situations, it's important to see the characteristics of the data at a more granular level.
+
+The [geom_histogram()'s binwidth parameter](http://docs.ggplot2.org/current/geom_histogram.html) can do the work of rounding and grouping the values. The following snippet groups earthquakes the nearest _tenth_ of a magnitude number. The `size` parameter in `geom_histogram()` controls the _width_ of each bar's outline:
+
+```{r, aug_2015_histogram_quakes_bucketed_tenths, message = FALSE, warning = FALSE}
+ggplot(usgs_data, aes(x = mag)) +
+  geom_histogram(binwidth = 0.1, color = "white", size = 0.2) + 
+  scale_x_continuous(breaks = pretty_breaks()) +
+  scale_y_continuous(expand = c(0, 0)) + 
+  ggtitle("Worldwide earthquakes grouped by tenths of magnitude number\nAugust 2015")
+```
+
+#### Time series
+
+Another tradeoff between histogram and scatterplot is that the latter displayed two facets of the data: magnitude and __time__. With a histogram, we can only show one or the other. 
+
+A histogram in which the count of records is grouped according to their time element is more commonly known as a __time series__. Here's how to chart the August 2015 earthquakes by _day_, which we derive from the `time` column using lubridate's __day()__ function:
+
+```{r, aug_2015_histogram_quakes_bucketed_by_day, message = FALSE, warning = FALSE}
+ggplot(usgs_data, aes(x = day(time))) +
+  geom_histogram(binwidth = 1, color = "white") +
+  scale_x_continuous(breaks = pretty_breaks()) +
+  scale_y_continuous(expand = c(0, 0)) + 
+  ggtitle("Worldwide earthquakes grouped by tenths of magnitude number\nAugust 2015")
+```
+
+#### Stacked charts
+
+We do have several options for showing two or more characteristics of a dataset as a bar chart. By setting the __fill__ aesthetic of the data -- in this case, to the `mag` column -- we can see the breakdown of earthquakes by magnitude for each day:
+
+
+```{r, aug_2015_histogram_quakes_stacked_by_day_and_mag, message = FALSE, warning = FALSE}
+ggplot(usgs_data, aes(x = day(time), fill = factor(round(mag)))) +
+  geom_histogram(binwidth = 1, color = "white") +
+  scale_x_continuous(breaks = pretty_breaks()) +
+  scale_y_continuous(expand = c(0, 0)) + 
+  ggtitle("Worldwide earthquakes grouped by day\nAugust 2015")
+```
+
+Let's be a little nitpicky and rearrange the __legend__ so that order of the labels follows the same order of how the bars are stacked:
+
+```{r, aug_2015_histogram_quakes_stacked_by_day_and_mag_sorted, message = FALSE, warning = FALSE}
+ggplot(usgs_data, aes(x = day(time), fill = factor(round(mag)))) +
+  geom_histogram(binwidth = 1, color = "white") +
+  scale_x_continuous(breaks = pretty_breaks()) +
+  scale_y_continuous(expand = c(0, 0)) + 
+  guides(fill = guide_legend(reverse = TRUE))
+  ggtitle("Worldwide earthquakes grouped by day and magnitude\nAugust 2015")
+```
+
+##### Limit the color choices
+
+Before we move on from the humble histogram/time series, let's address how unnecessarily _busy_ the previous chart is. There are __9__ gradations of color. Most of them, particularly at the extremes of the scale, are barely even visible because of how few earthquakes are in that magnitude range.
+
+Is it worthwhile to devote so much space on the legend to M6.0+ earthquakes when in reality, so few earthquakes are in that range? Sure, you might say: those are by far the deadliest of the earthquakes. While that is true, the purpose of this chart is _not_ to notify readers how many times their lives may have been rocked by a huge earthquake in the past 30 days -- a histogram a very poor way to convey such information, period. Furthermore, the reality of the chart's visual constraints make it next to impossible to even _see_ those earthquakes on the chart.
+
+So let's simplify the color range by making an _editorial decision_: earthquakes below M3.0 aren't terribly interesting. At M3.0+, they have the possibility of being notable depending on where they happen. Since the histogram already completely fails at showing location of the earthquakes, we don't need to feel too guilty that our simplified, two-color chart obscures the quantity of danger from August 2015's earthquakes:
+
+```{r, aug_2015_histogram_quakes_stacked_by_day_and_mag_two_tone, message = FALSE, warning = FALSE}
+ggplot(usgs_data, aes(x = day(time), fill = mag > 3)) +
+  geom_histogram(binwidth = 1, color = "black", size = 0.2) +
+  scale_x_continuous(breaks = pretty_breaks()) +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_fill_manual(values = c("#fee5d9", "#de2d26"), labels = c("M3.0 >", "M3.0+")) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  ggtitle("Worldwide earthquakes grouped by day and magnitude\nAugust 2015")
+```
+
+You probably _knew_ that the majority of earthquakes were below M3.0. But did you underestimate _how much_ they were in the majority? The two-tone chart makes the disparity much clearer.
+
+One more nitpicky design detail: the number of M3.0+ earthquakes, e.g. the __red__-colored bars, are more interesting than the number of weak earthquakes. But the jagged shape of the histogram makes it harder to count the M3.0+ earthquakes. So let's reverse the order of the stacking (and the legend). The easieset way to do that is to change the "phrasing" of the conditional statement for the __fill__ aesthetic, from `mag > 3` to `mag < 3`:
+
+
+```{r, aug_2015_histogram_quakes_stacked_by_day_and_mag_two_tone_rev, message = FALSE, warning = FALSE}
+ggplot(usgs_data, aes(x = day(time), fill = mag < 3)) +
+  geom_histogram(binwidth = 1, color = "black", size = 0.2) +
+  scale_x_continuous(breaks = pretty_breaks()) +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_fill_manual(values = c("#de2d26", "#fee5d9"), labels = c("M3.0+", "M3.0 >")) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  ggtitle("Worldwide earthquakes grouped by day and magnitude\nAugust 2015")
+```
+
+### It's the story, stupid
+
+
+Though it's easy to get caught up in the technical details of how to build and design a chart, remember the preeminent role of __editorial insight and judgment__. The details you choose to focus on and the _story you choose to tell_ have the greatest impact on the success of your data visualizations.
+
+
+### Filtering the USGS data
+ 
+TKTK
 
 The USGS data feed contains more than just earthquakes, though. So we use dplyr's  __group_by()__ function on the `type` column and then __summarise()__ the record counts:
 
@@ -500,8 +619,6 @@ states_map <- subset(us_map, !(us_map$STUSPS %in% x_states))
 ```
 
 
-
-
 The __sp__ package's __over()__ function can be used to join the rows of `sp_quakes` to the `STUSPS` column of `states_map`. In other words, the resulting data frame of earthquakes will have a `STUSPS` column, and the quakes in which the geospatial coordinates overlap with polygons in `states_map` will have a value in it, e.g. `"OK", "CA"`:
 
 
@@ -631,7 +748,7 @@ ggplot(states_quakes, aes(x = floor_date(as.Date(time), 'day'))) +
   ggtitle("Daily counts of M3.0+ earthquakes, August 2015\nOklahoma vs. all other U.S.")
 ```
 
-Or, alternatively, we can set the __fill__ aesthetic to be based on the `STUSPS` column; I use the __guides()__ and __scale_fill_manual()__ functions to order the colors and labels as I want them to be:
+Or, alternatively, we can set the __fill__ aesthetic to the `STUSPS` column; I use the __guides()__ and __scale_fill_manual()__ functions to order the colors and labels as I want them to be:
 
 ```{r, august_2015_us_histogram_ok_orange_fill_aes, message = FALSE, warning = FALSE}
 ggplot(states_quakes, aes(x = floor_date(as.Date(time), 'day'),
