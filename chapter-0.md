@@ -25,10 +25,41 @@ The concepts of this walkthrough summed up in an animated GIF composed of charts
 <a id="chapter-summaries"></a>
 __The four chapters:__
 
+0. [Meta stuff](#chapter-0-mark) - A summary of what this walkthrough contains, the ideal intended audience, and technical details on how to configure your system and R setup similar to mine.
 1. [Background into Oklahoma's earthquakes](#chapter-1-mark) - An overview of the scientific and political debates after Oklahoma's earthquake activity reached a record high -- in number and in magnitude -- since 2010. And an overview of the main datasets we'll use for our analysis.
 2. [Basic R and ggplot2 concepts and examples](#chapter-2-mark) - In this chapter, we'll cover most of the basic R and ggplot2 conventions needed to do the necessary data-gathering/cleaning and visualizations in subsequent chapters.
 3. [Exploring the historical earthquake data since 1995](#chapter-3-mark) - We repeat the same techniques in chapter 2, except instead of one month's worth of earthquakes, we look at 20 years of earthquake data. The volume and scope of data requires different approaches in visualization and analysis.
 4. [Correlation, limitations, and known unknowns](#chapter-4-mark) - Though the significance of the chronological earthquake trend is obvious, that's not enough to show that drilling is the _cause_ of the earthquake surge.
+
+
+### Key charts
+
+!["Oklahoma M3+ earthquakes, from 1995 to August 2015"](./images/ok_1995_to_aug_2015_by_year-1.png)
+
+!["Oklahoma M3+ earthquakes since 2008, by month"](http://localhost:4000/files/images/posts/ok-earthquakes/ok_1995_to_aug_2015_by_month-1.png)
+
+!["M3.0+ earthquakes in Oklahoma, first week of November 2011"](http://localhost:4000/files/images/posts/ok-earthquakes/unnamed-chunk-15-1.png)
+
+![M3.0+ earthquakes worldwide, 1995 to August 2015, U.S. versus World](http://localhost:4000/files/images/posts/ok-earthquakes/histogram_us_vs_non_us_earthquakes_only-1.png)
+
+!["Trend of M3.0+ U.S. earthquakes by month, 1995 to August 2015"](http://localhost:4000/files/images/posts/ok-earthquakes/histogram_us_earthquakes_monthly_trendline_400_cutoff-1.png)
+
+!["M3.0+ earthquakes by state from 1995 to August 2015"](http://localhost:4000/files/images/posts/ok-earthquakes/sorted_states_top_earthquakes-1.png)
+
+!["Earthquakes (3.0+ mag) among top 12 U.S. states\nby overall earthquake activity."](http://localhost:4000/files/images/posts/ok-earthquakes/earthquakes_top_12_states_2011_break-1.png)
+
+<a id="full-toc"></a>
+
+__Full table of contents__
+
+* TOC
+{:toc}
+
+
+<a id="chapter-0-mark"></a>
+
+# Chapter 0: Meta stuff
+
 
 
 __Long summary:__
@@ -50,19 +81,3 @@ Or, [download it from Github as a zip archive](https://github.com/dannguyen/ok-e
 The code I've written is at a beginner's level of R (i.e. where I'm at), with a heavy reliance on the [ggplot2 visualization library](http://ggplot2.org/), plus some Python and Bash where I didn't have the patience to figure out the R equivalents. If you understand how to work with data frames and have some familiarity with ggplot2, you should be able to follow along. Rather than organize and modularize my code, I've written it in an explicit, repetitive way, so it's easier to see how to iteratively build and modify the visualizations. The drawback is that there's the amount of code is more intimidating.
 
 My recommendation is to __not__ learn ggplot2 as I initially did: by copying and pasting ggplot2 snippets without understanding the theory of ggplot2's "grammar of graphics." Instead, read ggplot2 creator Hadley Wickham's book: [ggplot2: Elegant Graphics for Data Analysis](http://www.amazon.com/ggplot2-Elegant-Graphics-Data-Analysis/dp/0387981403). While the book seems stuffy and intimidating, it is by far the best way to get up to speed on ggplot2, both because of ggplot2's nuanced underpinnings and Wickham's excellent writing style. You can buy the [slightly outdated (but still worthwhile) 2009 version](http://www.amazon.com/ggplot2-Elegant-Graphics-Data-Analysis/dp/0387981403) or attempt to build [the new edition that Wickham is currently working on](https://github.com/hadley/ggplot2-book).
-
-
-End summary.
-
-
-# The Walkthrough
-
-
-<a id="full-toc"></a>
-
-__Full table of contents__
-
-* TOC
-{:toc}
-
-

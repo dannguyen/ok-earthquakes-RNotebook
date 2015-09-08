@@ -493,8 +493,6 @@ ggplot(data = states_quakes_by_month,
   ggtitle("Trend of M3.0+ U.S. earthquakes by month, 1995 to August 2015")
 ```
 
-
-
 It appears that the _entire_ U.S. has experienced an uptick in earthquakes since 2011. This does not bode well for our hypothesis that Oklahoma's surge is man-made, unless we can easily show that drilling activity across the United States has _also_ uniformly increased. Of course, that's not the way drilling for gas and oil works: only certain states are energy-rich enough to have substantial drilling activity.
 
 So now we need to dig deeper into the numbers. Just as doing a histogram by year obscured the trend in earthquake activity, counting earthquakes at the national level obscures the localized characteristics of earthquakes.
