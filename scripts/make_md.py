@@ -18,7 +18,8 @@ makedirs(FINAL_IMAGE_PATH, exist_ok = True)
 FINAL_MD_PATH = join(FINAL_PATH, '_posts', '2015-09-01-oklahoma-earthquakes-r-ggplot2.md')
 
 
-PROJECTS = ['chapter-1-intro',
+PROJECTS = [
+'chapter-1-intro',
 'chapter-2-basic-r-concepts',
 'chapter-3-exploring-historical-data',
 'chapter-4-geocorrelation']

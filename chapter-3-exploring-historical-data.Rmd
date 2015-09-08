@@ -69,7 +69,7 @@ We won't be mapping Alaska but including it is critical for analysis.
 TK explanation.
 
 
-```{r, message = F, warning = F}
+```{r, warning = F, message = F, cache = TRUE, cache.path = "/tmp/rstudio-cache/ok-earthquakes-3"}
 fn <- './data/usgs-quakes-dump.csv'
 zname <- paste(fn, 'zip', sep = '.')
 if (!file.exists(zname) || file.size(zname) < 2048){
@@ -97,7 +97,7 @@ nrow(usgs_data)
 Add some convenience columns. The `date` column can be derived with the standard `as.Date()` function. We use lubridate to convert the `time` column to a proper R time object, and then derive a `year` and `era` column:
 
 
-```{r, message = F}
+```{r, warning = F, message = F, cache = TRUE, cache.path = "/tmp/rstudio-cache/ok-earthquakes-3"}
 # I know this could be done in one/two mutate() calls...but sometimes
 #  that causes RStudio to crash, due to the size of the dataset...
 usgs_data <- usgs_data %>%
@@ -112,7 +112,7 @@ usgs_data <- usgs_data %>%
 
 Remove all non-earthquakes and events with magnitude less than 3.0:
 
-```{r, message = F}
+```{r, warning = F, message = F, cache = TRUE, cache.path = "/tmp/rstudio-cache/ok-earthquakes-3"}
 quakes <- usgs_data %>% filter(mag >= 3.0) %>%
   filter(type == 'earthquake')
 ```
@@ -126,7 +126,7 @@ nrow(quakes)
 
 
 
-```{r, message = F}
+```{r, warning = F, message = F, cache = TRUE, cache.path = "/tmp/rstudio-cache/ok-earthquakes-3"}
 
 # Create a spatial data frame----------------------------------
 sp_quakes <- SpatialPointsDataFrame(data = quakes,
@@ -228,7 +228,6 @@ ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
   geom_point(data = ok_quakes, aes(x = longitude, y = latitude), shape = 4,  alpha = 0.5, color = "red") +
   coord_map("albers", lat0 = 38, latl = 42) +
-  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
   theme_dan_map() +
   facet_wrap(~ era) +
   ggtitle("Oklahoma M3.0+ earthquakes by time period")
@@ -429,6 +428,7 @@ ggplot(data = states_quakes, aes(x = year, alpha = year >= 2011)) +
   geom_histogram(binwidth = 1, fill = "darkblue") +
   scale_alpha_discrete(range = c(0.5, 1.0)) +
   scale_y_continuous(expand = c(0, 0)) +
+  guides(alpha = F) +
   ggtitle("M3.0+ U.S. earthquakes by year, 1995 to August 2015")
 ```
 
@@ -460,6 +460,7 @@ ggplot(data = states_quakes_by_month,
   scale_alpha_discrete(range = c(0.5, 1.0)) +
   scale_y_continuous(expand = c(0, 0)) +
   scale_x_discrete(breaks = c_breaks, labels = c_labels) +
+  guides(alpha = F) +
   ggtitle("M3.0+ U.S. earthquakes by month, 1995 to August 2015")
 ```
 
@@ -479,6 +480,7 @@ ggplot(data = states_quakes_by_month,
   scale_alpha_discrete(range = c(0.6, 1.0)) +
   scale_x_discrete(breaks = c_breaks, labels = c_labels) +
   scale_y_continuous(expand = c(0, 0)) +
+  guides(alpha = F) +
   ggtitle("Trend of M3.0+ U.S. earthquakes by month, 1995 to August 2015")
 ```
 
@@ -492,7 +494,10 @@ ggplot(data = states_quakes_by_month,
   scale_alpha_discrete(range = c(0.6, 1.0)) +
   scale_x_discrete(breaks = c_breaks, labels = c_labels) +
   scale_y_continuous(expand = c(0, 0)) +
+  guides(alpha = F) +
   coord_cartesian(ylim = c(0, 400)) +
+  annotate("text", x = "2002-11", y = 390, family = dan_base_font(), hjust = 0.3,
+            size = 3, label = "Note: y-axis values truncated at 400.") +
   ggtitle("Trend of M3.0+ U.S. earthquakes by month, 1995 to August 2015")
 ```
 
@@ -719,7 +724,8 @@ ggplot(data = states_quakes_by_month_plus_all,
   coord_cartesian(ylim = c(0, 200)) +
   facet_wrap(~ ok_label, ncol = 1) +
   guides(fill = FALSE, alpha = FALSE) +
-  ggtitle("Trend of M3.0+ U.S. earthquakes by month, 1995 to August 2015") +
+  ggtitle(expression(atop("Trendlines of M3.0+ U.S. earthquakes by month, 1995 to August 2015",
+    atop(italic("Note: y-axis values truncated at 200"))))) +
   theme(panel.margin.y = unit(1, "lines"))
 ```
 

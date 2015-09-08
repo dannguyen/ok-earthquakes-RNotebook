@@ -47,7 +47,7 @@ dir.create('./data')
 
 Download the map data as before:
 
-```{r, warning = F, message = F, results = "hide"}
+```{r, warning = F, message = F, cache = TRUE, results = "hide", cache.path = "/tmp/rstudio-cache/ok-earthquakes-4"}
 fname <- "./data/cb_2014_us_state_20m.zip"
 if (!file.exists(fname)){
   url <- "http://www2.census.gov/geo/tiger/GENZ2014/shp/cb_2014_us_state_20m.zip"
@@ -67,7 +67,7 @@ states_map <- us_map[!us_map$STUSPS %in%
 Download and read the quakes data as before:
 
 
-```{r, warning = F, message = F}
+```{r, warning = F, message = F, cache = TRUE, cache.path = "/tmp/rstudio-cache/ok-earthquakes-4"}
 fn <- './data/usgs-quakes-dump.csv'
 zname <- paste(fn, 'zip', sep = '.')
 if (!file.exists(zname) || file.size(zname) < 2048){
@@ -85,7 +85,7 @@ usgs_data <- read.csv(fn, stringsAsFactors = FALSE)
 
 Filter and mutate the data
 
-```{r, warning = F, message = F}
+```{r, warning = F, message = F, cache = TRUE, cache.path = "/tmp/rstudio-cache/ok-earthquakes-4"}
 # Remove all non earthquakes and events with magnitude less than 3.0:
 quakes <- usgs_data %>%
           filter(mag >= 3.0, type == 'earthquake') %>%
@@ -95,7 +95,7 @@ quakes <- usgs_data %>%
 ```
 
 
-```{r, warning = F, message = F}
+```{r, warning = F, message = F, cache = TRUE, cache.path = "/tmp/rstudio-cache/ok-earthquakes-4"}
 sp_quakes <- SpatialPointsDataFrame(data = quakes,
                 coords = quakes[,c("longitude", "latitude")])
 sp_quakes@proj4string <- states_map@proj4string
@@ -108,7 +108,7 @@ states_quakes <- mutate(states_quakes, is_OK = STUSPS == 'OK')
 
 Making data frames for just Oklahoma:
 
-```{r, warning = F, message = F}
+```{r, warning = F, message = F, cache = TRUE, cache.path = "/tmp/rstudio-cache/ok-earthquakes-4"}
 # Dataframe of just Oklahoma quakes:
 ok_quakes <- filter(states_quakes, is_OK)
 # map of just Oklahoma state:
@@ -116,16 +116,123 @@ ok_map <- states_map[states_map$STUSPS == 'OK',]
 ```
 
 
-## Moving beyond earthquakes
+## Location is everything
 
-In chapter 3, we tried some initial maps before moving on to histograms, which are more effective for quantifying the frequency and number of earthquakes.
+In [chapter 3](#mark-small_multiples_oklahoma_map_quakes), we created a few national and Oklahoma maps before moving on to histograms, which were more effective for quantifying the frequency and number of earthquakes.
 
-But now that we're pretty well convinced that Oklahoma is facing unprecedented seismic activity, we need to examine the _locations_ of the earthquakes in order to make any kind of correlation between their occurrence and human activity. Let's revisit
+But now that we're pretty well convinced that Oklahoma is facing unprecedented seismic activity, it's necessary to focus on the earthquakes' _locations_ in order to make any kind of correlation between their occurrence and human activity.
+
+Revisiting this small-multiples map from [Chapter 3](#mark-small_multiples_oklahoma_map_quakes):
+
+![mark-small_multiples_oklahoma_map_quakes](./images/mark-small_multiples_oklahoma_map_quakes.png)
+
+Let's facet earthquakes by year, within the period of 2011 to 2015:
+
+```{r, small_multiples_oklahoma_map_quakes_2011_2015,  message = F}
+ok_quakes_2010_2015 <- filter(ok_quakes, year >= 2010)
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
+  geom_point(data = ok_quakes_2010_2015, aes(x = longitude, y = latitude), shape = 1,  alpha = 0.5, color = "red") +
+  coord_map("albers", lat0 = 38, latl = 42) +
+  theme_dan_map() +
+  facet_wrap(~ year, ncol = 3) +
+  ggtitle("Oklahoma M3.0+ earthquakes by time period")
+```
+
+### Getting geographically oriented
+
+The Census boundaries have worked nicely for our charting. But they lack geographical information, such as city and landmark location. Let's use the [__ggmap__ library](https://github.com/dkahle/ggmap) to bring in OpenStreetMap data, via the [Stamen toner layers](http://maps.stamen.com/toner/#12/37.7706/-122.3782):
+
+
+```{r, ok_stamen_map_base, warning = F, message = F, cache = TRUE, cache.path = "/tmp/rstudio-cache/ok-earthquakes-4"}
+ok_bbox <- c( left = -103.3, right = -94.2, bottom = 33.5, top = 37.1)
+ok_stamen_map <- get_stamenmap(bbox = ok_bbox, zoom = 7, maptype =  "toner", crop = T)
+
+gg_ok_map <- ggmap(ok_stamen_map) +
+             geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
+                           fill = NA, color = "#884400")
+
+gg_ok_map
+```
+
+Rather than overlaying the earthquakes as dots, let's use hexbinning so that we don't obscure the geographical labels:
+
+```{r, ok_stamen_map_2011_2015_hexbin, warning = F, message = F, cache = TRUE, cache.path = "/tmp/rstudio-cache/ok-earthquakes-4", fig.height = 12, fig.width = 12}
+gg_ok_map +
+  stat_binhex(data = filter(ok_quakes_2010_2015, year == 2011 | year == 2015), aes(x = longitude, y = latitude, color = ..count..), bins = 40, fill = NA) +
+  guides(fill = F) +
+  scale_color_gradientn(colours=c("yellow","red")) +
+  facet_wrap(~ year, ncol = 1) +
+  ggtitle("Oklahoma M3.0+ earthquake density, 2011 and 2015") +
+  theme_dan_map()
+```
+
+Let's define two areas of interest:
+
+Enid area:
+
+```{r, enid_bbox, warning = F, message = F}
+enid_bbox <- c(xmin = -99.2, xmax = -96.5, ymin = 36.2, ymax = 37)
+enid_rect_layer <- annotate(geom = "rect", xmin = enid_bbox['xmin'],
+                      xmax = enid_bbox['xmax'],
+                      ymin = enid_bbox['ymin'],
+                      ymax = enid_bbox['ymax'],
+                      fill = "NA", color = "purple", linetype = "dashed", size = 1)
+gg_ok_map + enid_rect_layer + ggtitle("Enid area")
+```
+
+OK City area:
+
+```{r, okcity_bbox, warning = F, message = F}
+okcity_bbox <- c(xmin = -98, xmax = -96.3, ymin = 35.3, ymax = 36.19)
+okcity_rect_layer <- annotate(geom = "rect", xmin = okcity_bbox['xmin'],
+                      xmax = okcity_bbox['xmax'],
+                      ymin = okcity_bbox['ymin'],
+                      ymax = okcity_bbox['ymax'],
+                      fill = "NA", color = "forestgreen", linetype = "dashed", size = 1)
+gg_ok_map + okcity_rect_layer + ggtitle("OK City area")
+```
+
+
+Let's examine our bounding boxes:
+
+```{r, small_multiples_oklahoma_map_quakes_2011_2015_with_bboxes,  message = F}
+ok_quakes_2010_2015 <- filter(ok_quakes, year >= 2010)
+ggplot() +
+  geom_polygon(data = ok_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
+  okcity_rect_layer +
+  enid_rect_layer +
+  geom_point(data = ok_quakes_2010_2015, aes(x = longitude, y = latitude), shape = 1,  alpha = 0.5, color = "red") +
+  coord_map("albers", lat0 = 38, latl = 42) +
+  theme_dan_map() +
+  facet_wrap(~ year, ncol = 3) +
+  ggtitle("Oklahoma M3.0+ earthquakes by time period")
+```
+
+
+Let's get the earthquakes per area:
+
+```{r, warning = F, message = F}
+# Oklahoma City area quakes
+ok_city_quakes <- ok_quakes %>%
+                      filter(longitude >= okcity_bbox['xmin'],
+                             longitude < okcity_bbox['xmax'],
+                             latitude >= okcity_bbox['ymin'],
+                             latitude < okcity_bbox['ymax'])
+
+enid_quakes <- ok_quakes %>%
+                      filter(longitude >= enid_bbox['xmin'],
+                             longitude < enid_bbox['xmax'],
+                             latitude >= enid_bbox['ymin'],
+                             latitude < enid_bbox['ymax'])
+```
+
+Our hypothesis: if injection wells are the cause of Oklahoma's recent earthquake surge, then we should expect to find increased injection well activity in the "Enid area" and "OK City area" bounding boxes.
 
 
 
 
-## NEW Injection volumes
+## Oklahoma injection well data
 
 Download # http://www.occeweb.com/og/ogdatafiles2.htm
 
@@ -143,7 +250,7 @@ if (!file.exists(fname)){
 
 Read the data
 
-```{r, warning = F, message = F}
+```{r, warning = F, message = F, cache = TRUE, cache.path = "/tmp/rstudio-cache/ok-earthquakes-4"}
 xl_2013 <- read_excel(fname)
 ```
 
@@ -163,13 +270,13 @@ injections_2013 <-  xl_2013 %>%
 ```
 
 
-Aggregate the wells by their unique identifier (`API`) and spatial coordinates and create a `annual_volume` column. I also add a `count` column which, _theoretically_, should always be 12 or less, i.e. 12 _months_, assuming that each well puts out, at most, one monthly record for its injection activity. But that assumes a lot of things, such as no errors in the data entry process:
+Aggregate the wells by their unique identifier (`API`) and spatial coordinates and create a `raw_annual_volume` column. I also add a `count` column which, _theoretically_, should always be 12 or less, i.e. 12 _months_, assuming that each well puts out, at most, one monthly record for its injection activity. But that assumes a lot of things, such as no errors in the data entry process:
 
 
 ```{r, warning = F, message = F}
 wells_2013 <-  injections_2013 %>%
     group_by(ReportYear, API, X, Y) %>%
-    summarise(count = n(), annual_volume = sum(Volume))
+    summarise(count = n(), raw_annual_volume = sum(Volume))
 ```
 
 
@@ -197,26 +304,26 @@ filter(wells_2013, count > 12) %>%
   arrange(count)
 ```
 
-_Sigh._ Rather than do a proper investigation and cleaning of this anomaly, I propose this (mis)use of math: for wells that have a `count` greater than 12, divide their `annual_total` by the ratio of `count/12`. For example, a well with a `count` of __24__ would have its `annual_total` divided by __2__, i.e. `24 / 2`. We'll store this value in a new column, `adjusted_total`:
+_Sigh._ Rather than do a proper investigation and cleaning of this anomaly, I propose this (mis)use of math: for wells that have a `count` greater than 12, divide their `annual_total` by the ratio of `count/12`. For example, a well with a `count` of __24__ would have its `annual_total` divided by __2__, i.e. `24 / 2`. We'll store this value in a new column, `adjusted_annual_volume`:
 
 ```{r, warning = F, message = F}
 wells_2013 <- wells_2013 %>%
-  mutate(adjusted_volume = ifelse(count <= 12, annual_volume, annual_volume / (count / 12)))
+  mutate(adjusted_annual_volume = ifelse(count <= 12, raw_annual_volume, raw_annual_volume / (count / 12)))
 
 ```
 
 The result of that mutation:
 
-```{r}
+```{r, warning = F, message = F}
 wells_2013[wells_2013$API == '35003220190000', ]
 ```
 
 
-Using the `adjusted_volume`, How close are we to Walsh's estimate of 160 million barrels a month?
+Using the `adjusted_annual_volume`, How close are we to Walsh's estimate of 160 million barrels a month?
 
 
-```{r}
-100 * (160000000 - (sum(wells_2013$adjusted_volume) / 12)) / 160000000
+```{r, warning = F, message = F}
+100 * (160000000 - (sum(wells_2013$adjusted_annual_volume) / 12)) / 160000000
 ```
 
 
@@ -239,8 +346,8 @@ wells_2013$is_OK <- xdf$STUSPS == 'OK'
 
 _Now_ let's calculate the average injection volume per month and find how much we're off compared to Walsh's estimation of 160 million barrels a month:
 
-```{r}
-100 * (160000000 - (sum(filter(wells_2013, is_OK)$adjusted_volume) / 12)) / 160000000
+```{r, warning = F, message = F}
+100 * (160000000 - (sum(filter(wells_2013, is_OK)$adjusted_annual_volume) / 12)) / 160000000
 ```
 
 Only 1.6% off. Not bad for doing the most blunt and shallow kind of data cleaning.
@@ -248,21 +355,23 @@ Only 1.6% off. Not bad for doing the most blunt and shallow kind of data cleanin
 But how different is the volume of the mappable wells compared to the non-mappable wells in our dataset?
 
 
-```{r}
+```{r, warning = F, message = F}
 # TKTKTK
-100 * (sum(mapped_wells_2013$annual_volume) -
-         sum(clean_wells_2013$annual_volume)) /
-  sum(clean_wells_2013$annual_volume)
+100 * (sum(wells_2013$adjusted_annual_volume) -
+         sum(filter(wells_2013, is_OK)$adjusted_annual_volume)) /
+  sum(wells_2013$adjusted_annual_volume)
 ```
 
-11%. It's a little disconcerting that as much as 10% of relevant data is being ignored because their coordinates are off -- and that's only scratching the surface of possible data entry problems. But, I think we can move on. Again, as I cannot stress enough: this is only a walkthrough, not an actual peer-reviewed research paper.
+By excluding the non-mappable wells, we lose more than 11% of the total `adjusted_annual_volume`. It's a little disconcerting that more than 11% of _possibly_ relevant data is being ignored because their coordinates are gibberish -- and that's only scratching the surface of possible data entry problems. But, if ~160M barrels/month is good enough for _Walsh et al_, I think we can move on. Again, as I cannot stress enough: this is only a walkthrough, not an actual  research paper.
+
+
 
 ### 2012 UIC data
 
 
 
 
-```{r, warning = F, message = F}
+```{r, warning = F, message = F, cache = TRUE, cache.path = "/tmp/rstudio-cache/ok-earthquakes-4"}
 fname <- "./data/2012_UIC_Injection_Volumes_Report.xlsx"
 if (!file.exists(fname)){
   url <- "http://www.occeweb.com/og/2012Injections20141029.xlsx"
@@ -283,20 +392,20 @@ injections_2012 <- xl_2012 %>%
 ```
 
 
-Let's do an aggregation and get the `annual_volume`. Then derive `clean_wells` by compensating for wells in which the count of records is more than 12:
+Let's do an aggregation and get the `raw_annual_volume`. Then derive `clean_wells` by compensating for wells in which the count of records is more than 12:
 
 
 ```{r, warning = F, message = F}
 wells_2012 <-  injections_2012 %>%
     group_by(ReportYear, API) %>%
-    summarise(count = n(), annual_volume = sum(Volume))
+    summarise(count = n(), raw_annual_volume = sum(Volume))
 ```
 
-Perform the cleaning/averaging for calculating `adjusted_volume`:
+Perform the cleaning/averaging for calculating `adjusted_annual_volume`:
 
 ```{r, warning = F, message = F}
 wells_2012 <- wells_2012 %>%
-  mutate(adjusted_volume = ifelse(count <= 12, annual_volume, annual_volume / (count / 12)))
+  mutate(adjusted_annual_volume = ifelse(count <= 12, raw_annual_volume, raw_annual_volume / (count / 12)))
 ```
 
 
@@ -304,12 +413,12 @@ wells_2012 <- wells_2012 %>%
 
 So the big problem with the 2012 data is that there is no `X` or `Y` column, i.e. the geospatial data.
 
-But we can fix that by joining `clean_wells_2012` to `mapped_wells_2013`, the latter of which _does_ contain geospatial data. Both tables contain an `API` column. But let me be clear: it is a _major_ assumption to think that the API values, whatever they stand for, aren't also filled with typos or nonsense data.
+But we can fix that by joining `wells_2012` to `wells_2013`, the latter of which _does_ contain geospatial data. Both tables contain an `API` column. But let me be clear: it is a _major_ assumption to think that the API values, whatever they stand for, aren't also filled with typos or nonsense data.
 
 For SQL fans, the dplyr package has a conveniently named __left_join()__ function. If you're fuzzy on how left joins work, remember that it preserves all the records on the "left" side -- in this case, `wells_2012`. For wells in `wells_2012` that don't have a corresponding match of `API` in `wells_2013`, the columns `X`, `Y`, and `is_OK` will be NA:
 
 
-```{r}
+```{r, warning = F, message = F}
 wells_2012 <- wells_2012 %>%
   left_join(select(as.data.frame(wells_2013), API, X, Y, is_OK), by = 'API') %>%
   mutate(is_OK = !is.na(is_OK))
@@ -317,26 +426,26 @@ wells_2012 <- wells_2012 %>%
 
 Let's calculate the monthly average for 2012 for the mappable wells:
 
-```{r}
-sum(filter(wells_2012, is_OK)$adjusted_volume) / 12
+```{r, warning = F, message = F}
+sum(filter(wells_2012, is_OK)$adjusted_annual_volume) / 12
 ```
 
 And how much did we lose by removing wells in 2012 that didn't have a matching API in 2013?
 
 
-```{r}
-100 * (sum(wells_2012$adjusted_volume) -
-         sum(filter(wells_2012, is_OK)$adjusted_volume)) /
-  sum(wells_2012$adjusted_volume)
+```{r, warning = F, message = F}
+100 * (sum(wells_2012$adjusted_annual_volume) -
+         sum(filter(wells_2012, is_OK)$adjusted_annual_volume)) /
+  sum(wells_2012$adjusted_annual_volume)
 ```
 
 That's more than a rounding error within the 2012 data...but moving on to 2011.
 
 ### 2011 data
 
-And the data keeps getting worse:
+And the data keeps getting quirkier:
 
-```{r, warning = F, message = F}
+```{r, warning = F, message = F, cache = TRUE, cache.path = "/tmp/rstudio-cache/ok-earthquakes-4"}
 fname <- "./data/2011_UIC_Injection_Volumes_Report.xlsx"
 if (!file.exists(fname)){
   url <- "http://www.occeweb.com/og/2011INJECTIONVOLUMES.xlsx"
@@ -348,7 +457,7 @@ xl_2011 <- read_excel(fname)
 
 To see how ugly things are, check out the column names:
 
-```{r}
+```{r, warning = F, message = F}
 names(xl_2011)
 ```
 
@@ -356,7 +465,7 @@ Columns 27 to 49 exist, but have null values. Usually this is the result of some
 
 This turns out not to be too horrible, using standard R syntax to subset the selection by choosing only the first 27 columns. Then we apply the same mutations and filters as we did for the 2012 data set. We have to make a few changes because whoever maintains the 2011 dataset decided to use a whole different naming scheme, e.g. `IsDelete` instead of `ISDELETE` _and_ datatype convention, e.g. `"0"` instead of `0`:
 
-```{r}
+```{r, warning = F, message = F}
 injections_2011 <- xl_2011[, c(1:26)] %>%
     mutate(Volume = as.numeric(Volume),
           API = as.character(API), ReportYear = as.numeric(ReportYear)) %>%
@@ -370,10 +479,10 @@ Like 2012, there are no `X` and `Y`  columns. So we repeat 2012's filtering and 
 # sum the wells
 wells_2011 <-  injections_2011 %>%
     group_by(ReportYear, API) %>%
-    summarise(count = n(), annual_volume = sum(Volume))
+    summarise(count = n(), raw_annual_volume = sum(Volume))
 # clean the wells
 wells_2011 <- wells_2011 %>%
-  mutate(adjusted_volume = ifelse(count <= 12, annual_volume, annual_volume / (count / 12)))
+  mutate(adjusted_annual_volume = ifelse(count <= 12, raw_annual_volume, raw_annual_volume / (count / 12)))
 # geo-join the wells
 wells_2011 <- wells_2011 %>%
   left_join(select(as.data.frame(wells_2013), API, X, Y, is_OK), by = 'API') %>%
@@ -382,10 +491,10 @@ wells_2011 <- wells_2011 %>%
 
 Again, let's calculate the percent difference between the mappable and non-mappable wells:
 
-```{r}
-100 * (sum(wells_2011$adjusted_volume) -
-         sum(filter(wells_2011, is_OK)$adjusted_volume)) /
-  sum(wells_2011$adjusted_volume)
+```{r, warning = F, message = F}
+100 * (sum(wells_2011$adjusted_annual_volume) -
+         sum(filter(wells_2011, is_OK)$adjusted_annual_volume)) /
+  sum(wells_2011$adjusted_annual_volume)
 ```
 
 It's roughly the same difference as found in 2012. Meh, moving on.
@@ -395,7 +504,7 @@ It's roughly the same difference as found in 2012. Meh, moving on.
 
 The next data file combines the years 2006 to 2010 into a single spreadsheet. That's a strong cue that the data structure will likely be signficantly different than what we have so far:
 
-```{r, warning = F, message = F}
+```{r, warning = F, message = F, cache = TRUE, cache.path = "/tmp/rstudio-cache/ok-earthquakes-4"}
 fname <- "./data/all_2006-2010uic_1012a.xls"
 if (!file.exists(fname)){
   url <- "http://www.occeweb.com/og/all_2006-2010uic_1012a.xls"
@@ -410,26 +519,26 @@ You can run `names(xl_2006_2010)` yourself, but the upshot is that this data fil
 Unlike the other datasets, there is a `FLUID_TYPE` column which very _unhelpfully_ contains values such as `"S"` and `""`:
 
 
-```{r}
+```{r, warning = F, message = F}
 group_by(xl_2006_2010, FLUID_TYPE) %>% summarize(count = n())
 ```
 
 Since saltwater injections make up the vast majority of UIC wells, I'm just going to assume that `S` stands for "saltwater". As a bonus nusiance, the column name for `"TOTAL VOLUME"` is a bit jacked up with extra whitespace. So I'm just going to manually rename the columns as part of the initial data filtering step:
 
-```{r}
+```{r, warning = F, message = F}
 # rename the columns
-names(xl_2006_2010) <- c('API_COUNTY', 'API', 'LEASE_NAME', 'WELL_NUMBER', 'Y', 'X', 'ReportYear', 'FLUID_TYPE', 'PACKERDPTH', 'sub_annual_volume')
+names(xl_2006_2010) <- c('API_COUNTY', 'API', 'LEASE_NAME', 'WELL_NUMBER', 'Y', 'X', 'ReportYear', 'FLUID_TYPE', 'PACKERDPTH', 'sub_raw_annual_volume')
 ```
 
-Since this data is already aggregated by year, we _could_ skil the summarization step. But -- surprise, surprise -- it turns out there are multiple annual saltwater injection records per well. And it doesn't appear that the records are just duplicates. So, rather than calculate an average, I set `adjusted_volume` to be the biggest (i.e. `max()`) value of the duplicate records:
+Since this data is already aggregated by year, we _could_ skil the summarization step. But -- surprise, surprise -- it turns out there are multiple annual saltwater injection records per well. And it doesn't appear that the records are just duplicates. So, rather than calculate an average, I set `adjusted_annual_volume` to be the biggest (i.e. `max()`) value of the duplicate records:
 
-```{r}
+```{r, warning = F, message = F}
 # filter the data
 wells_2006_2010 <- xl_2006_2010 %>%
-    mutate(sub_annual_volume = as.numeric(sub_annual_volume),
+    mutate(sub_raw_annual_volume = as.numeric(sub_raw_annual_volume),
            API = paste(as.character(API_COUNTY), as.character(API), sep = ''), ReportYear = as.numeric(ReportYear)) %>%
     group_by(API, X, Y, ReportYear) %>%
-    summarise(count = n(), annual_volume = sum(sub_annual_volume), adjusted_volume = max(sub_annual_volume))
+    summarise(count = n(), raw_annual_volume = sum(sub_raw_annual_volume), adjusted_annual_volume = max(sub_raw_annual_volume))
 ```
 
 
@@ -450,10 +559,10 @@ wells_2006_2010$is_OK <- xdf$STUSPS == 'OK'
 
 Let's calculate the difference between mapped and non-mappable wells:
 
-```{r}
-100 * (sum(wells_2006_2010$adjusted_volume) -
-         sum(filter(wells_2006_2010, is_OK)$adjusted_volume)) /
-  sum(wells_2006_2010$adjusted_volume)
+```{r, warning = F, message = F}
+100 * (sum(wells_2006_2010$adjusted_annual_volume) -
+         sum(filter(wells_2006_2010, is_OK)$adjusted_annual_volume)) /
+  sum(wells_2006_2010$adjusted_annual_volume)
 ```
 
 Less than a single percent. That's nice. Though that doesn't help us with the discrepencies in years 2011, 2012, and 2013...
@@ -463,11 +572,11 @@ Less than a single percent. That's nice. Though that doesn't help us with the di
 
 We can now create a data frame of annual saltwater injection volumes for 2006 to 2013. All that grunt work makes this collation quite easy. I use dplyr's __bind_rows()__ function, which I believe is just a wrapper around __rbind()__. Some of the wells have typos in the `ReportYear`, so we apply a filter to remove all years greater than 2013:
 
-```{r}
-all_mapped_wells <- bind_rows(mapped_wells_2013,
-                       mapped_wells_2012,
-                       mapped_wells_2011,
-                       mapped_wells_2006_2010) %>%
+```{r, warning = F, message = F}
+all_wells <- bind_rows(wells_2013,
+                              wells_2012,
+                              wells_2011,
+                              wells_2006_2010) %>%
                     filter(ReportYear <= 2013)
 ```
 
@@ -475,51 +584,73 @@ all_mapped_wells <- bind_rows(mapped_wells_2013,
 Now let's make a histogram:
 
 
-```{r}
-ggplot(data = group_by(all_mapped_wells, ReportYear)
-                          %>% summarize(total_volume = sum(annual_volume)),
-        aes(x = ReportYear, y = total_volume)) +
+```{r, warning = F, message = F}
+ggplot(data = group_by(all_wells, ReportYear)
+                          %>% summarize(raw_annual_volume = sum(raw_annual_volume)),
+        aes(x = ReportYear, y = raw_annual_volume)) +
   geom_bar(stat = 'identity') +
   ggtitle("Mappable wells")
 ```
 
-Let's look at the difference between mappable and cleaned:
-
-```{r}
-all_cleaned_wells <- bind_rows(clean_wells_2013,
-                       clean_wells_2012,
-                       clean_wells_2011,
-                       clean_wells_2006_2010) %>%
-                    filter(ReportYear <= 2013)
-```
 
 
 Compare the two:
 
 
-```{r}
-ggplot(data = group_by(all_cleaned_wells, ReportYear)
-                          %>% summarize(total_volume = sum(annual_volume)),
-        aes(x = ReportYear, y = as.integer(total_volume / 1000000))) +
-  geom_bar(stat = 'identity', fill = "red") +
-  geom_bar(stat = 'identity',
-           data = group_by(all_mapped_wells, ReportYear)
-                          %>% summarize(total_volume = sum(annual_volume)),
-           fill = "black"
-           ) +
-  scale_y_continuous(labels = comma, expand = c(0, 0)) +
-  ggtitle("Mappable vs cleaned wells")
+```{r, warning = F, message = F}
+ggplot() +
+
+  # mappable + non-mappable, non-adjusted volume
+  geom_bar(
+           data = all_wells %>%
+                    group_by(ReportYear) %>%
+                    summarize(total_volume = sum(raw_annual_volume)),
+           aes(x = ReportYear, y = total_volume / 1000000),
+           stat = 'identity', fill = "firebrick") +
+
+  # mappable + non-mappable, adjusted volume
+  geom_bar(
+           data = all_wells %>%
+                    group_by(ReportYear) %>%
+                    summarize(total_volume = sum(adjusted_annual_volume)),
+           aes(x = ReportYear, y = total_volume / 1000000),
+           stat = 'identity', fill = "darkorange") +
+
+  # mappable, adjusted volume
+  geom_bar(
+           data = filter(all_wells, is_OK) %>%
+                  group_by(ReportYear) %>%
+                  summarize(total_volume = sum(adjusted_annual_volume)),
+           aes(x = ReportYear, y = total_volume / 1000000),
+           stat = 'identity', fill = "gray") +
+
+    scale_y_continuous(labels = comma, expand = c(0, 0)) +
+    annotate("text", x = 2006, y = 2450, family = dan_base_font(), size = 4,
+             label = "Raw volume", color = "firebrick") +
+    annotate("text", x = 2006, y = 2300, family = dan_base_font(), size = 4,
+             label = "Adjusted volume", color = "darkorange") +
+    annotate("text", x = 2006, y = 2150, family = dan_base_font(), size = 4,
+             label = "Adjusted volume that is mappable", color = "#777777") +
+
+
+    theme(axis.title = element_text(color = 'black')) +
+    xlab("") + ylab("Barrels injected (millions)") +
+    ggtitle("Difference in annual saltwater injection volumes between:\nraw values, adjusted values, and mappable adjusted values")
+
+
+
 ```
 
+TK explanation
 
 
 
 Summarise by location
 
 
-```{r}
-q1 <- ggplot(data = all_mapped_wells %>%
-         group_by(Y, ReportYear) %>% summarize(total = sum(annual_volume)),
+```{r, warning = F, message = F}
+q1 <- ggplot(data = all_wells %>%
+         group_by(Y, ReportYear) %>% summarize(total = sum(raw_annual_volume)),
        aes(x = factor(ReportYear), y = total, order = desc(Y >= 36),
            fill = Y >= 36)) + geom_bar(stat = 'identity') +
         scale_fill_manual(values = c("#EEEEEE", "#FF6600"), labels = c("Below 36.5", "Above 36.5")) +
@@ -530,7 +661,7 @@ q1 <- ggplot(data = all_mapped_wells %>%
 
 Histogram of quakes
 
-```{r}
+```{r, warning = F, message = F}
 q2 <- ggplot(data = filter(ok_quakes, year >= 2006),
        aes(x = factor(year), order = desc(latitude >= 36),
            fill = latitude >= 36)) + geom_histogram(binwidth = 1) +
@@ -539,7 +670,7 @@ q2 <- ggplot(data = filter(ok_quakes, year >= 2006),
 ```
 
 
-```{r}
+```{r, warning = F, message = F}
 grid.arrange(
   q1 + theme(axis.text.y = element_blank()) + ggtitle("Annual injection volumes"),
   q2 + theme(axis.text.y = element_blank()) + ggtitle("Annual count of M3.0+ earthquakes")
@@ -550,14 +681,14 @@ grid.arrange(
 
 Facet wrap the wells:
 
-```{r}
+```{r, warning = F, message = F}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
-  geom_point(data = filter(all_mapped_wells, annual_volume <= 360000),
+  geom_point(data = filter(all_wells, raw_annual_volume <= 360000),
              aes(x = X, y = Y),
              alpha = 0.3, shape = 1, color = 'yellow') +
-  geom_point(data = filter(all_mapped_wells, annual_volume >= 360000),
+  geom_point(data = filter(all_wells, raw_annual_volume >= 360000),
              aes(x = X, y = Y),
              alpha = 0.3, shape = 1, color = 'purple') +
   # geom_point(data = filter(ok_quakes, year >= 2012), aes(x = longitude, y = latitude),
@@ -572,7 +703,7 @@ TODO: Hexbin them
 
 Counts:
 
-```{r}
+```{r, warning = F, message = F}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
@@ -588,12 +719,12 @@ Volume
 
 
 
-```{r}
+```{r, warning = F, message = F}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
   stat_summary_hex(data = all_wells,
-                   aes(x = X, y = Y, z = total_volume),
+                   aes(x = X, y = Y, z = raw_annual_volume),
                    bins = 30,
                    fun = function(z){ sum(z) },
                    color = 'white') +
@@ -608,12 +739,12 @@ ggplot() +
 
 Hi-lo pass:
 
-```{r}
+```{r, warning = F, message = F}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
   stat_summary_hex(data = all_wells,
-                   aes(x = X, y = Y, z = total_volume),
+                   aes(x = X, y = Y, z = raw_annual_volume),
                    bins = 30,
                    fun = function(z){
                      sz <- min(sum(z), 60000000)
@@ -634,7 +765,7 @@ ggplot() +
 Do side by side facet of earthquakes
 
 
-```{r}
+```{r, warning = F, message = F}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
@@ -650,12 +781,12 @@ ggplot() +
 
 #### Draw a highlight box
 
-```{r}
+```{r, warning = F, message = F}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
   stat_summary_hex(data = filter(all_wells, ReportYear >= 2010),
-                   aes(x = X, y = Y, z = total_volume),
+                   aes(x = X, y = Y, z = raw_annual_volume),
                    bins = 30,
                    fun = function(z){
                      sz <- min(sum(z), 60000000)
@@ -675,7 +806,7 @@ ggplot() +
 
 Do the same with earthquakes:
 
-```{r}
+```{r, warning = F, message = F}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
@@ -695,12 +826,12 @@ ggplot() +
 
 ### Test, volume and alpha:
 
-```{r}
+```{r, warning = F, message = F}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
   stat_summary_hex(data = filter(all_wells, ReportYear == 2006),
-                   aes(x = X, y = Y, z = total_volume),
+                   aes(x = X, y = Y, z = raw_annual_volume),
                    alpha = 0.5,
                    bins = 30,
                    fun = function(z){ sum(z) },
@@ -710,12 +841,12 @@ ggplot() +
   theme_dan_map()
 ```
 
-```{r}
+```{r, warning = F, message = F}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group),
                fill = "white", color = "black") +
   stat_summary_hex(data = filter(all_wells, ReportYear == 2013),
-                   aes(x = X, y = Y, z = total_volume),
+                   aes(x = X, y = Y, z = raw_annual_volume),
                    alpha = 0.5,
                    bins = 30,
                    fun = function(z){ sum(z) },
@@ -758,7 +889,6 @@ okquakes_weekly <- mutate(ok_quakes, week = floor_date(date, 'week'), panel = 'Q
   filter(year >= 2008) %>%
   group_by(week) %>%
   summarize(count = n())
-
 
 gp <- ggplot() + scale_x_date(breaks = pretty_breaks(),
                               limits = c(as.Date('2008-01-01'), as.Date('2015-08-31')))
@@ -834,25 +964,13 @@ http://news.stanford.edu/news/2015/june/okla-quake-drilling-061815.html
 ## Trying Google Maps
 
 
-```{r, warning = F, message = F}
+```{r, warning = F, message = F, cache = TRUE, cache.path = "/tmp/rstudio-cache/ok-earthquakes-4"}
 library(ggmap)
 ok_goog_map <- get_googlemap(center = c(lon = -99.007, lat = 35.38905),  size = c(450,250), zoom = 6, scale = 2, maptype = 'terrain',
 style = c(feature = "administrative.province", element = "labels", visibility = "off"))
 ggmap(ok_goog_map)
 ```
 
-Stamen map
-
-```{r, warning = F, message = F}
-ok_bounds <- c( left = -103.3,
-                bottom = 33.5,
-                top = 37.0,
-                right = -94.2
-                )
-ok_stamen_map <- get_stamenmap(bbox = ok_bounds, zoom = 7, maptype =  "toner-hybrid",crop = T)
-
-ggmap(ok_stamen_map)
-```
 
 
 ------
