@@ -5,7 +5,7 @@ title: "Chapter 3: Exploring the Historical Data"
 <span id="mark-chapter-3"></span>
 
 
-# Chapter 3: Exploring the Historical Data
+# Chapter 3: Exploring Earthquake Data from 1995 to 2015
 
 Questions to ask:
 

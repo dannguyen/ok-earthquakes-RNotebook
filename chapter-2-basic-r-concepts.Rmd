@@ -15,7 +15,7 @@ output:
 
 <span id="mark-chapter-2"></span>
 
-# Chapter 2: Basic R Concepts
+# Chapter 2: Basic R and Data Visualization Concepts
 
 This chapter is focused on R syntax and concepts for working with data frames and generating visualizations via ggplot2. For demonstration purposes, I use a subset of the U.S. Geological Survey's earthquake data (records for August 2015). Chapters 3 and 4 will repeat the same concepts except with earthquake data spanning back to 1995.
 
@@ -47,7 +47,7 @@ library(ggmap)
 
 ### Customizing the themes
 
-This is entirely optional, though it will likely add some annoying roadblocks for everyone trying to follow along. There's not much to theming in ggplot2: just remember a shit-ton of syntax and have a lot of patience. You can view my [ggplot theme script and copy it from here](https://github.com/dannguyen/ok-earthquakes-RNotebook/blob/master/myslimthemes.R), and then make it locally available to your scripts (e.g. `./myslimthemes.R`), so that you can source them as I do in each of my scripts: 
+This is entirely optional, though it will likely add some annoying roadblocks for everyone trying to follow along. There's not much to theming in ggplot2: just remember a shit-ton of syntax and have a lot of patience. You can view my [ggplot theme script and copy it from here](https://github.com/dannguyen/ok-earthquakes-RNotebook/blob/master/myslimthemes.R), and then make it locally available to your scripts (e.g. `./myslimthemes.R`), so that you can source them as I do in each of my scripts:
 
 ```{r, message = FALSE, warning = FALSE}
 source("./myslimthemes.R")
@@ -198,7 +198,7 @@ ggplot(usgs_data, aes(x = time, y = mag)) +
 ```
 
 
-This ends up being a bad idea. With so many earthquake events, we run into the problem of __overplotting__: Dots representing earthquakes of similar magnitude and time will overlap and obscure each other. 
+This ends up being a bad idea. With so many earthquake events, we run into the problem of __overplotting__: Dots representing earthquakes of similar magnitude and time will overlap and obscure each other.
 
 One way to fix this is to change the shape of the dots and increase their transparency, i.e. _decrease_ their __alpha__:
 
@@ -223,7 +223,7 @@ Below, I simply organize the earthquakes into "buckets" by rounding them to the 
 
 ```{r, aug_2015_histogram_quakes_rounded_integer_simple, message = FALSE, warning = FALSE}
 ggplot(usgs_data, aes(x = round(mag))) +
-  geom_histogram(binwidth = 1) 
+  geom_histogram(binwidth = 1)
 ```
 
 The same chart, but with some polishing of its style. The `color` parameter for `geom_histogram()` allows us to create an outline to visually separate the bars:
@@ -232,9 +232,9 @@ The same chart, but with some polishing of its style. The `color` parameter for 
 ```{r, aug_2015_histogram_quakes_rounded_integer_styled, message = FALSE, warning = FALSE}
 ggplot(usgs_data, aes(x = round(mag))) +
   geom_histogram(binwidth = 1, color = "white") +
-  # this removes the margin between the plot and the chart's bottom, and 
+  # this removes the margin between the plot and the chart's bottom, and
   # formats the y-axis labels into something more human readable:
-  scale_y_continuous(expand = c(0, 0), labels = comma) + 
+  scale_y_continuous(expand = c(0, 0), labels = comma) +
   ggtitle("Worldwide earthquakes by magnitude, rounded to nearest integer\nAugust 2015")
 ```
 
@@ -244,15 +244,15 @@ The [geom_histogram()'s binwidth parameter](http://docs.ggplot2.org/current/geom
 
 ```{r, aug_2015_histogram_quakes_bucketed_tenths, message = FALSE, warning = FALSE}
 ggplot(usgs_data, aes(x = mag)) +
-  geom_histogram(binwidth = 0.1, color = "white", size = 0.2) + 
+  geom_histogram(binwidth = 0.1, color = "white", size = 0.2) +
   scale_x_continuous(breaks = pretty_breaks()) +
-  scale_y_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(expand = c(0, 0)) +
   ggtitle("Worldwide earthquakes grouped by tenths of magnitude number\nAugust 2015")
 ```
 
 #### Time series
 
-Another tradeoff between histogram and scatterplot is that the latter displayed two facets of the data: magnitude and __time__. With a histogram, we can only show one or the other. 
+Another tradeoff between histogram and scatterplot is that the latter displayed two facets of the data: magnitude and __time__. With a histogram, we can only show one or the other.
 
 A histogram in which the count of records is grouped according to their time element is more commonly known as a __time series__. Here's how to chart the August 2015 earthquakes by _day_, which we derive from the `time` column using lubridate's __day()__ function:
 
@@ -260,7 +260,7 @@ A histogram in which the count of records is grouped according to their time ele
 ggplot(usgs_data, aes(x = day(time))) +
   geom_histogram(binwidth = 1, color = "white") +
   scale_x_continuous(breaks = pretty_breaks()) +
-  scale_y_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(expand = c(0, 0)) +
   ggtitle("Worldwide earthquakes grouped by tenths of magnitude number\nAugust 2015")
 ```
 
@@ -273,7 +273,7 @@ We do have several options for showing two or more characteristics of a dataset 
 ggplot(usgs_data, aes(x = day(time), fill = factor(round(mag)))) +
   geom_histogram(binwidth = 1, color = "white") +
   scale_x_continuous(breaks = pretty_breaks()) +
-  scale_y_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(expand = c(0, 0)) +
   ggtitle("Worldwide earthquakes grouped by day\nAugust 2015")
 ```
 
@@ -283,7 +283,7 @@ Let's be a little nitpicky and rearrange the __legend__ so that order of the lab
 ggplot(usgs_data, aes(x = day(time), fill = factor(round(mag)))) +
   geom_histogram(binwidth = 1, color = "white") +
   scale_x_continuous(breaks = pretty_breaks()) +
-  scale_y_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(expand = c(0, 0)) +
   guides(fill = guide_legend(reverse = TRUE))
   ggtitle("Worldwide earthquakes grouped by day and magnitude\nAugust 2015")
 ```
@@ -328,7 +328,7 @@ Though it's easy to get caught up in the technical details of how to build and d
 
 
 ### Filtering the USGS data
- 
+
 TKTK
 
 The USGS data feed contains more than just earthquakes, though. So we use dplyr's  __group_by()__ function on the `type` column and then __summarise()__ the record counts:

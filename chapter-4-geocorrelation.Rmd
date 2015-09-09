@@ -1,5 +1,5 @@
 ---
-title: "Chapter 4: Correlations and Limitations"
+title: "Chapter 4: The data cleaning"
 author: "Dan Nguyen"
 date: "August 17, 2015"
 output:
@@ -9,13 +9,22 @@ output:
 
 <a id="mark-chapter-4"></a>
 
-# Chapter 4: Correlation, limitations, and known unknowns
+# Chapter 4: The Data Cleaning
 
+This chapter was going to be focused on geographic statistical analysis but, like most real-world data projects, ended up getting mired in the data cleaning process.
 
 Questions to answer:
 - What are the geospatial characteristics of the recent Earthquakes?
 - Is the recent spurt of earthquakes located in one area?
 - What is the correlation between well activity and earthquakes?
+
+
+## Don't trust data you can't clean yourself
+
+
+
+
+
 
 
 ## Setup

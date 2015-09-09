@@ -29,7 +29,7 @@ __The four chapters:__
 1. [Background into Oklahoma's earthquakes](#mark-chapter-1) - An overview of the scientific and political debates after Oklahoma's earthquake activity reached a record high -- in number and in magnitude -- since 2010. And an overview of the main datasets we'll use for our analysis.
 2. [Basic R and ggplot2 concepts and examples](#mark-chapter-2) - In this chapter, we'll cover most of the basic R and ggplot2 conventions needed to do the necessary data-gathering/cleaning and visualizations in subsequent chapters.
 3. [Exploring the historical earthquake data since 1995](#mark-chapter-3) - We repeat the same techniques in chapter 2, except instead of one month's worth of earthquakes, we look at 20 years of earthquake data. The volume and scope of data requires different approaches in visualization and analysis.
-4. [Correlation, limitations, and known unknowns](#mark-chapter-4) - Though the significance of the chronological earthquake trend is obvious, that's not enough to show that drilling is the _cause_ of the earthquake surge.
+4. [The Data Cleaning](#mark-chapter-4) - By far the most soul-suckingly tedious and frustrating yet most necessary chapter in every data journalism project.
 
 
 ### Key charts
@@ -83,3 +83,30 @@ Or, [download it from Github as a zip archive](https://github.com/dannguyen/ok-e
 The code I've written is at a beginner's level of R (i.e. where I'm at), with a heavy reliance on the [ggplot2 visualization library](http://ggplot2.org/), plus some Python and Bash where I didn't have the patience to figure out the R equivalents. If you understand how to work with data frames and have some familiarity with ggplot2, you should be able to follow along. Rather than organize and modularize my code, I've written it in an explicit, repetitive way, so it's easier to see how to iteratively build and modify the visualizations. The drawback is that there's the amount of code is more intimidating.
 
 My recommendation is to __not__ learn ggplot2 as I initially did: by copying and pasting ggplot2 snippets without understanding the theory of ggplot2's "grammar of graphics." Instead, read ggplot2 creator Hadley Wickham's book: [ggplot2: Elegant Graphics for Data Analysis](http://www.amazon.com/ggplot2-Elegant-Graphics-Data-Analysis/dp/0387981403). While the book seems stuffy and intimidating, it is by far the best way to get up to speed on ggplot2, both because of ggplot2's nuanced underpinnings and Wickham's excellent writing style. You can buy the [slightly outdated (but still worthwhile) 2009 version](http://www.amazon.com/ggplot2-Elegant-Graphics-Data-Analysis/dp/0387981403) or attempt to build [the new edition that Wickham is currently working on](https://github.com/hadley/ggplot2-book).
+
+## X things you might learn how to do in R
+
+Most of these things I learned during the process of writing this walkthrough:
+
+- How to make a scatterplot
+- How to reduce the effect of overplotting
+- How to make a histogram
+- How to customize the granularity of your histogram
+- How to create a two-tone stacked chart
+- How to reverse the stacking order of a two-tone chart
+- How to plot a geographical shapefile as a polygon
+- How to plot points on a shapefile
+- How to specify the projection when plotting geographical data
+- How to filter a data frame of coordinates using a shapefile
+- How to highlight a single data point on a chart
+- How to add value labels to a chart
+- How to re-order the labels of a chart's legend
+- How to create a small multiples chart
+- How to extract individual state boundaries from a U.S. shapefile
+- How to use Google Maps and OpenStreetMap data in your map plots
+- How to bin points with hexagons
+- How to properly project hexbinned geographical data 
+- How to draw a trendline
+- How to make a pie chart
+- How to highlight a single chart within a small multiples chart
+- How to use Gill Sans as your default chart font.

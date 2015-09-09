@@ -1,5 +1,5 @@
 
-# Chapter 1: Background on Oklahoma's Earthquakes
+# Chapter 1: Reading up on Oklahoma's Earthquakes
 
 
 http://www.newyorker.com/magazine/2015/04/13/weather-underground
@@ -122,6 +122,8 @@ As I'll cover in [chapter 4](#mark-chapter-4) of this walkthrough, things have o
 
 ## About the Oklahoma Corporation Commission
 
-The OCC has many [relevant datasets from the drilling industry](http://www.occeweb.com/og/ogdatafiles2.htm), in particular, spreadsheets of the locations of UIC ([underground injection control](http://water.epa.gov/type/groundwater/uic/)) wells, i.e. where drilling waste water is injected into the earth for storage.
+The OCC has many [relevant datasets from the drilling industry](http://www.occeweb.com/og/ogdatafiles2.htm), in particular, spreadsheets of the locations of UIC ([underground injection control](http://water.epa.gov/type/groundwater/uic/)) wells, i.e. where wastewater from drilling operations is injected into the earth for storage.
 
-Unfortunately, there's not a lot of easily-found documentation of this data, and a cursory examination shows that there are problems of typos and taxonomy. In [chapter 4](#mark-chapter-4), I attempt to map some of the UIC data. But I don't know enough about the data to make any useful observations. The [data/ directory](https://github.com/dannguyen/ok-earthquakes-RNotebook/tree/master/data) of this repo contains a few of the OCC files for future exploration; hopefully someone else can shed more light in their own walkthrough.
+The data comes in several Excel files, all of which are mirrored in the [data/ directory](https://github.com/dannguyen/ok-earthquakes-RNotebook/tree/master/data). The key fields are the locations of the wells and the volume of injection in barrels per month or year.
+
+Unfortunately, the OCC doesn't seem to have a lot of easily-found documentation for this data. Also unfortunate: this data is essential in attempting to make any useful conclusions about the cause of Oklahoma's earthquakes. In [Chapter 4](#mark-chapter-4), I go into significant detail about the OCC data's limitations, but still fall very short of what's needed to make the data usable..
