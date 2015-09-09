@@ -37,7 +37,7 @@ library(ggmap)
 
 - [ggplot2](http://ggplot2.org/) is _the_ visualization framework.
 - [dplyr](https://cran.rstudio.com/web/packages/dplyr/vignettes/introduction.html) is a library for manipulating, transforming, and aggregating data frames. It also utilizes the [nice piping](http://seananderson.ca/2014/09/13/dplyr-intro.html) from the [magrittr package](https://cran.r-project.org/web/packages/magrittr/index.html), which warms the Unix programmer inside me.
-- [lubridate](https://github.com/hadley/lubridate) - Greatly eases working with time values when generating time-series and time-based filters. Think of it as [moment.js for R](http://momentjs.com/).
+- [lubridate](https://github.com/hadley/lubridate) - Greatly eases working with time values when generating time series and time-based filters. Think of it as [moment.js for R](http://momentjs.com/).
 - [scales](https://github.com/hadley/scales) - Provides helpers for making scales for our ggplot2 charts.
 - [grid](https://stat.ethz.ch/R-manual/R-devel/library/grid/html/grid-package.html) - contains some functionality that ggplot2 uses for chart styling and arrangement. including the [unit()](https://stat.ethz.ch/R-manual/R-devel/library/grid/html/unit.html) function.
 - [hexbin](https://cran.r-project.org/web/packages/hexbin/index.html) - Used with ggplot2 to make hexbin maps.
@@ -129,7 +129,7 @@ The `time` column of `usgs_data` contains timestamps of the events:
 head(usgs_data$time)
 ```
 
-However, these values are _strings_; to work with them as measurements of _time_, e.g. in creating a time-series chart, we convert them to time objects (more specifically, objects of class __POSIXct__). The __lubridate__ package provides the useful __ymd_hms()__ function for fairly robust parsing of strings.
+However, these values are _strings_; to work with them as measurements of _time_, e.g. in creating a time series chart, we convert them to time objects (more specifically, objects of class __POSIXct__). The __lubridate__ package provides the useful __ymd_hms()__ function for fairly robust parsing of strings.
 
 The standard way to transform a data frame column looks like this:
 
@@ -187,7 +187,9 @@ That's a nice big number with almost no meaning. We want to know how _big_ these
 
 ## A quick introduction to simple charts in ggplot2
 
-A natural first attempt at visualization is to make a __scatterplot__ of the earthquake data, in which each earthquake is plotted by its time along the x-axis and its magnitude on the y-axis:
+The earthquake data contains several dimensions of interest: location (e.g. `latitude` and `longitude`), magnitude, and time. A [scatterplot](http://www.cookbook-r.com/Graphs/Scatterplot/) is frequently used to show the relationship between two or more of a dataset's variables. In fact, we can think of geographic maps as a sort of scatterplot showing longitude and latitude along the x- and y-axis, though maps don't imply that there's a "relationship", per se, between the two coordinates.
+
+We'll cover [mapping later in this chapter](#mark-mapping-intro), so let's start off by plotting the earthquake data with __time__ as the _indepdendent_ variable, i.e. along the x-axis, and __mag__ as the _dependent_ variable, i.e. along the y-axis.
 
 
 ```{r, overplotted_earthquakes, message = FALSE, warning = FALSE}
@@ -197,8 +199,9 @@ ggplot(usgs_data, aes(x = time, y = mag)) +
   ggtitle("Worldwide seismic events for August 2015")
 ```
 
+First of all, from a conceptual standpoint, one might argue that a scatterplot doesn't much sense here, because how _big_ an earthquake is seems to be totally unrelated to when it happens. This is not quite true, as weaker earthquakes can presage or closely follow &ndash;  i.e. [aftershocks](http://earthquake.usgs.gov/learn/glossary/?term=aftershocks) &ndash; a massive earthquake.
 
-This ends up being a bad idea. With so many earthquake events, we run into the problem of __overplotting__: Dots representing earthquakes of similar magnitude and time will overlap and obscure each other.
+But such an insight is lost in our current attempt because we're attempting to plot the entire world's earthquakes on a single plot. This ends up being impractical. There are so many earthquake events that we run into the problem of __overplotting__: Dots representing earthquakes of similar magnitude and time will overlap and obscure each other.
 
 One way to fix this is to change the shape of the dots and increase their transparency, i.e. _decrease_ their __alpha__:
 
@@ -208,15 +211,17 @@ ggplot(usgs_data, aes(x = time, y = mag)) +
   scale_x_datetime() +
   ggtitle("Worldwide seismic events for August 2015")
 ```
-
-
 That's a little better, but there are just too many points for us to visually process. For example, we can vaguely tell that there seem to be more earthquakes of magnitudes between 0 and 2. But we can't accurately quantify the difference.
 
-Having too much data to sensibly plot is going to be a major recurring theme for the entirety of this walkthrough. Hopefully the examples in this chapter broaden your techniques and ways of thinking when it comes to organizing data.
+{:#make-histogram}
 
 ### Fun with histograms
 
-In this scenario -- and most scenarios, actually --the best tactic is to go for something __simple__: A bar chart ([histogram](http://docs.ggplot2.org/current/geom_histogram.html)) is the most straightforward way to show _how many_ earthquakes fall within a magnitude range.
+Having too much data to sensibly plot is going to be a major and recurring theme for the entirety of this walkthrough. In chapter 3, our general strategy will be to divide and filter the earthquake records by location, so that not all of the points are plotted in a single chart.
+
+However, sometimes it's best to just __change the story you want to tell__.  With a scatterplot, we attempted (and failed) to show intelligible patterns in a month's worth of worldwide earthquake activity. Let's go simpler. Let's attempt to just show what _kinds_ of earthquakes, and _how many_, have occurred around the world in a month's timespan.
+
+A bar chart ([histogram](http://docs.ggplot2.org/current/geom_histogram.html)) is the most straightforward way to show _how many_ earthquakes fall within a magnitude range.
 
 Below, I simply organize the earthquakes into "buckets" by rounding them to the nearest integer:
 
@@ -239,6 +244,10 @@ ggplot(usgs_data, aes(x = round(mag))) +
 ```
 
 The tradeoff for the histogram's clarity is a loss in granularity. In some situations, it's important to see the characteristics of the data at a more granular level.
+
+
+[](){:#aug_2015_histogram_quakes_bucketed_tenths-mark}
+
 
 The [geom_histogram()'s binwidth parameter](http://docs.ggplot2.org/current/geom_histogram.html) can do the work of rounding and grouping the values. The following snippet groups earthquakes the nearest _tenth_ of a magnitude number. The `size` parameter in `geom_histogram()` controls the _width_ of each bar's outline:
 
@@ -362,9 +371,11 @@ nrow(quakes)
 ```
 
 
+<a href="" id="mark-mapping-intro"></a>
+
 ### Plotting the earthquake data without a map
 
-It's worth remembering that a geographical map can be thought of a [plain ol' scatter plot](http://docs.ggplot2.org/0.9.3/geom_point.html). In this case, each dot is plotted using the __longitude__ and __latitude__ values, which serve as the __x__ and __y__ coordinates, respectively:
+A geographical map can be thought of a [plain ol' scatterplot](http://docs.ggplot2.org/0.9.3/geom_point.html). In this case, each dot is plotted using the __longitude__ and __latitude__ values, which serve as the __x__ and __y__ coordinates, respectively:
 
 ```{r, quake_points_no_map, message = FALSE, warning = FALSE}
 ggplot(quakes, aes(x = longitude, y = latitude)) + geom_point() +
@@ -374,6 +385,9 @@ ggplot(quakes, aes(x = longitude, y = latitude)) + geom_point() +
 Even without the world map boundaries, we can see in the locations of the earthquakes a rough outline of the world's fault lines. Compare the earthquakes plot to this [Digital Tectonic Activity Map from NASA](http://earthobservatory.nasa.gov/Features/Tectonics/):
 
 ![Digital Tectonic Activity Map of the Earth, via NASA](./images/Plate_tectonics_map.gif)
+
+
+<a href="" id="how-reduce-overplotting"></a>
 
 Even with just ~1,000 points &ndash; and, in the next chapter, __20,000+__ points, we again run into a problem of [__overplotting__](http://www.cookbook-r.com/Graphs/Scatterplots_(ggplot2)/#handling-overplotting), so I'll increase the size and transparency of each point and change the point shape. And just to add some variety, I'll change the [color](http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf) of the points from black to `firebrick`:
 
@@ -736,7 +750,7 @@ ggplot(states_quakes, aes(x = floor_date(as.Date(time), 'day'))) +
 ```
 
 
-To create a stacked time-series, in which Oklahoma's portion of earthquakes is in orange, it's just a matter of adding another layer as before:
+To create a stacked time series, in which Oklahoma's portion of earthquakes is in orange, it's just a matter of adding another layer as before:
 
 
 ```{r, august_2015_us_histogram_ok_orange, message = FALSE, warning = FALSE}
@@ -782,21 +796,114 @@ ggplot2's __facet_wrap()__ function provides a convenient way to generate a grid
 ```
 
 
-### Hexbins
+### Map your dots with bins
 
-Dot map
+We've seen how a histogram brings clarity to dense data by "binning" values, such as [grouping earthquakes by nearest decimal of magnitude](aug_2015_histogram_quakes_bucketed_tenths-mark), or by day for a time series.
 
-```{r, aug_2015_ok_map_dot_map, message = FALSE}
+The same concept can be applied to scatterplots and maps when overplotting is a problem:
+
+
+```{r, aug_2015_ok_map_dot_map_overplotted, message = FALSE}
 ggplot() +
   geom_polygon(data = ok_map,
                aes(x = long, y = lat, group = group),
                fill = "white", color = "#666666", size = 0.5) +
   geom_point(data = ok_quakes,
-              aes(x = longitude, y = latitude), color = "red", alpha = 0.4, shape = 4, size = 2.5) +
+              aes(x = longitude, y = latitude), color = "red", alpha = 0.4, shape = 1, size = 2.5) +
   coord_equal() +
   ggtitle("M3.0+ earthquakes in Oklahoma, August 2015") +
   theme_dan_map()
 ```
+
+
+__Note__: In the snippet above, I use the [__coord_equal()__ function](http://stackoverflow.com/questions/12443620/why-coord-equal-doesnt-work-the-way-it-should) instead of `coord_map("albers")` -- binning adds another complexity to the projection workflow, so I leave out Albers for now.
+
+A few of the earthquakes are so close together that they appear to be in the exact same location at this zoom level. But how many exactly? There could be 2, 3, or 10 earthquakes represented by what appear to be a single marker.
+
+Binning a map (or scatterplot) replaces the dots with shapes, such as rectangle or hexagon, and uses the shape's __fill__ to indicate the number of points within each shape's "bin". Here's a rectangular bin of the data:
+
+
+```{r, aug_2015_ok_rectbin, message = FALSE}
+ggplot(data = ok_quakes, aes(x = longitude, y = latitude)) +
+  geom_polygon(data = ok_map,
+               aes(x = long, y = lat, group = group),
+               fill = "white", color = "#666666", size = 0.5) +
+  stat_bin2d(color = "gray") +
+  coord_equal() +
+  ggtitle("M3.0+ earthquakes in Oklahoma, August 2015 (rectangular-binned)") +
+  theme_dan_map()
+```
+
+
+We control the granularity of the chart with the the __bins__ argument for __stat_bin2d()__; setting it to `10` will make the bins bigger than in the previous chart. In the snippet below, I also set the __alpha__ aesthetic to vary by `..count..`:
+
+
+```{r, aug_2015_ok_rectbin_alpha, message = FALSE}
+ggplot(data = ok_quakes, aes(x = longitude, y = latitude)) +
+  geom_polygon(data = ok_map,
+               aes(x = long, y = lat, group = group),
+               fill = "white", color = "#666666", size = 0.5) +
+  stat_bin2d(color = "gray", bins = 10, fill = "blue", aes(alpha = ..count..)) +
+  coord_equal() +
+  ggtitle("M3.0+ earthquakes in Oklahoma, August 2015 (rectangular-binned)") +
+  theme_dan_map()
+```
+
+
+
+
+
+
+
+
+You can also set `fill` to null and have the bins vary by __color__, which is helpful for seeing the underlying layers. In the example below, I've also included the earthquakes as points so that you can see how many points are in each bin:
+
+
+(This is not something I would do in practice because it's redundant and it increases the visual clutter.)
+
+```{r, aug_2015_ok_rectbin_hollow, message = FALSE}
+ggplot(data = ok_quakes, aes(x = longitude, y = latitude)) +
+  geom_polygon(data = ok_map,
+               aes(x = long, y = lat, group = group),
+               fill = "white", color = "#666666", size = 0.5) +
+  stat_bin2d(aes(color = ..count..), bins = 10, fill = "NA") +
+  geom_point(color = "red", alpha = 0.5, shape = 1) +
+  coord_equal() +
+  ggtitle("M3.0+ earthquakes in Oklahoma, August 2015 (rectangular-binned)") +
+  theme_dan_map()
+```
+
+
+If you want to get fancy
+
+
+
+
+####
+
+
+
+#### Density plot
+
+
+```{r, aug_2015_ok_density2d, message = FALSE}
+ggplot() +
+  geom_polygon(data = ok_map,
+               aes(x = long, y = lat, group = group),
+               fill = "white", color = "#666666", size = 0.5) +
+  geom_point(data = ok_quakes, aes(x = longitude, y = latitude),
+            color = "red") +
+  stat_density2d(data = ok_quakes, aes(x = longitude, y = latitude)) +
+  coord_equal() +
+  ggtitle("M3.0+ earthquakes in Oklahoma, August 2015 (rectangular-binned)") +
+  theme_dan_map()
+```
+
+
+
+
+######TKTK
+
 
 Hexbin without projection, Oklahoma
 

@@ -89,8 +89,8 @@ My recommendation is to __not__ learn ggplot2 as I initially did: by copying and
 Most of these things I learned during the process of writing this walkthrough:
 
 - How to make a scatterplot
-- How to reduce the effect of overplotting
-- How to make a histogram
+- [How to reduce the effect of overplotting](#how-reduce-overplotting)
+- [How to make a histogram](#how-histogram)
 - How to customize the granularity of your histogram
 - How to create a two-tone stacked chart
 - How to reverse the stacking order of a two-tone chart
