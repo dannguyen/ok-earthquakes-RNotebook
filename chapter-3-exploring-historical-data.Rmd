@@ -215,7 +215,7 @@ First, let's make a data frame and spatial data frame of Oklahoma and its quakes
 # Dataframe of just Oklahoma quakes:
 ok_quakes <- filter(states_quakes, is_OK)
 # map of just Oklahoma state:
-ok_map <- states_map[states_map$STUSPS == 'OK',]
+ok_map <- subset(states_map, STUSPS == 'OK')
 ```
 
 
@@ -226,7 +226,7 @@ Mapping earthquakes by era, for Oklahoma:
 ```{r, small_multiples_oklahoma_map_quakes, fig.cap = "Small Multiples Oklahoma", message = F}
 ggplot() +
   geom_polygon(data = ok_map, aes(x = long, y = lat, group = group), fill = "white", color = "#777777") +
-  geom_point(data = ok_quakes, aes(x = longitude, y = latitude), shape = 4,  alpha = 0.5, color = "red") +
+  geom_point(data = ok_quakes, aes(x = longitude, y = latitude), shape = 1,  alpha = 0.5, color = "red") +
   coord_map("albers", lat0 = 38, latl = 42) +
   theme_dan_map() +
   facet_wrap(~ era) +
@@ -285,7 +285,8 @@ ok_1995_to_aug_2015_by_month <- ggplot(data = filter(ok_quakes, year >= 2008),
           breaks = mbreaks, position = 'identity', fill = 'red') +
   scale_x_date(breaks = date_breaks("year"), labels = date_format("%Y")) +
   scale_y_continuous(expand = c(0, 0)) +
-  annotate(geom = "text", x = as.Date("2011-11-01"), y = 50, size = rel(4.5), vjust = 0.0, color = "#DD6600", family = dan_base_font(),
+  annotate(geom = "text", x = as.Date("2011-11-01"), y = 50, size = rel(4.5), vjust = 0.0, 
+           color = "#DD6600", family = dan_base_font(),
            label = "November 2011, 10:53 PM\nRecord M5.6 earthquake near Prague, Okla.") +
   ggtitle("Oklahoma M3+ earthquakes since 2008, by month")
 # plot the chart
@@ -523,29 +524,24 @@ ggplot(states_quakes, aes(STUSPS)) +
 
 Let's re-order that histogram so that states are listed by number of earthquakes rather than in alphabetical order:
 
-([This StackOverflow question was very helpful](http://stackoverflow.com/questions/20041136/how-to-avoid-ggplot-sorting-the-x-axis-while-plotting-geom-bar))
+Note: This was easily one of the hardest things to figure out, until I stumbled upon [this (low-voted) StackOverflow answer](http://stackoverflow.com/a/27229362/160863). I'm not sure if its the conventional way but it sure makes complete sense wit how we've used scale_x_discrete() so far:
 
-
-```{r, sorted_states_top_earthquakes, message = F}
-# Apparently there's a reorder() convention...rather than look that up, I've just decided to set the factor manually
-qcounts <- states_quakes %>% group_by(STUSPS) %>% summarise(count = n()) %>%
-    arrange(desc(count))
-# create a vector
-qcounts$st_order <- factor(qcounts$STUSPS, levels = qcounts$STUSPS)
-ggplot(qcounts, aes(st_order, count)) +
+```{r, sorted_states_top_earthquakes_categorical, message = F}
+ggplot(states_quakes, aes(x = STUSPS)) +
+  geom_histogram(binwidth = 1, width = 0.7) +
+  geom_histogram(data = filter(states_quakes, is_OK), binwidth = 1, fill = "#FF6600", width = 0.7) +
   scale_y_continuous(expand = c(0, 0)) +
-  geom_bar(width = 0.5, stat = "identity") +
-  geom_bar(data = filter(qcounts, STUSPS == "OK"), stat = "identity", fill = "#FF6600", width = 0.5) +
+  scale_x_discrete(limits = qcounts$STUSPS) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.6)) +
   ggtitle("M3.0+ earthquakes by state from 1995 to August 2015")
 
 ```
 
-Only a few states have had a significant number of earthquakes. So let's just pick the top 12 for further analysis:
+Only a few states have had a significant number of earthquakes; the others are so seismically quiet that they're just noise on the chart. So let's just pick the top 12 for further analysis:
 
 ```{r, message = F}
-top_states <- head(qcounts, 12)$STUSPS
-top_quakes <- filter(states_quakes, states_quakes$STUSPS %in% top_states)
+top_states <- count(states_quakes, STUSPS, sort = TRUE) %>% head(12)
+top_quakes <- states_quakes %>% filter(STUSPS %in% top_states$STUSPS)
 ```
 
 
@@ -556,14 +552,16 @@ We already know that the vast majority of Oklahoma's earthquakes are post-2011. 
 - 1995 through 2010
 - 2011 through August 2015
 
+TK: not sure why that ranking works
+
 ```{r, earthquakes_top_12_states_2011_break, message = F}
-top_quakes$st_order <- factor(top_quakes$STUSPS, levels = top_states)
-ggplot(top_quakes, aes(x = st_order, fill = year < 2011)) +
+top_quakes$ranking <- factor(top_quakes$STUSPS, levels = top_states$STUSPS)
+ggplot(top_quakes, aes(x = ranking, fill = year < 2011)) +
   geom_histogram(binwidth = 1) +
   scale_fill_manual(values = c("#990000", "#DDCCCC"), labels = c("2011 - Aug. 2015", "1995 - 2010"), guide = guide_legend(reverse = TRUE)) +
  theme(axis.text.x = element_text(
-   face = ifelse(levels(top_quakes$st_order) =="OK","bold","plain"),
-   color = ifelse(levels(top_quakes$st_order) =="OK","#FF6600","#444444"))
+   face = ifelse(levels(top_quakes$ranking) =="OK","bold","plain"),
+   color = ifelse(levels(top_quakes$ranking) =="OK","#FF6600","#444444"))
   ) +
   scale_y_continuous(expand = c(0, 0)) +
   ggtitle("Earthquakes (3.0+ mag) among top 12 U.S. states\nby overall earthquake activity.")
@@ -579,34 +577,37 @@ Let's get a more specific breakdown of earthquake activity by state. Instead of 
 
 
 ```{r, earthquake_activity_top_states_by_year, message = F}
-top_quakes_ge_2005 <- filter(top_quakes, year >= 2005)
-g <- ggplot(top_quakes_ge_2005, aes(factor(year))) +
-    # draw orange box around oklahoma
-    geom_rect(data = filter(top_quakes_ge_2005, is_OK), color = '#FF6600', fill = "#fDf2e9", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, size = 0.3, linetype = 'dashed') +
+g <- ggplot(top_quakes, aes(year)) +
   geom_histogram(binwidth = 1, fill = "#999999", width = 0.8)  +
-  geom_histogram(data = filter(top_quakes_ge_2005, year >= 2012), binwidth = 1, fill="#CC0000", width = 0.8) +
-  scale_x_discrete(breaks = c(2006, 2010, 2014)) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 600))
+  # draw orange box around oklahoma
+  geom_rect(data = filter(top_quakes, is_OK), color = '#FF6600', fill = "#FFEEE0", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf, size = 0.2, linetype = 'dashed') +  
+  geom_histogram(data = filter(top_quakes, year >= 2012), binwidth = 1, fill="#CC0000", width = 0.8) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1200)) 
+
+# plot it
 g + facet_wrap(~ STUSPS, ncol = 4) + theme(panel.margin = unit(c(1, 1, 1, 1), "lines")) +
-  ggtitle("U.S. M3.0+ earthquakes by year and by state.")
+  ggtitle("M3.0+ earthquakes in top U.S. states by earthquake activity\n1995 to 2012")
 ```
 
-While Alaska had a peak in 2014, notice that it's not a huge deviation from prior years. Oklahoma's 2014, by contrast, is quite a few deviations from its median earthquake activity since 2005.
+While Alaska had a big year in 2014, it's not a huge deviation from prior years. By contrast, Oklahoma's 2014 is several deviations from its median earthquake activity since 1995.
 
 
 ### Small multi-pies of earthquakes by year and by state
 
-While I agree with [Edward Tufte that pie charts are generally a bad idea](http://www.edwardtufte.com/bboard/q-and-a-fetch-msg?msg_id=00018S), pies actually works quite well in this specific situation because of just how dramatic Oklahoma's earthquake activity has been. Below, I include the earthquake data since 1995 and break the time periods into equal divisions via the `era` column:
+I agree with [Edward Tufte that pie charts are generally a bad idea](http://www.edwardtufte.com/bboard/q-and-a-fetch-msg?msg_id=00018S), but pies actually work OK in this specific situation because of just how dramatic Oklahoma's earthquake activity has been. 
+
+Below, I re-aggreate states_quakes
 
 ```{r, earthquake_activity_pie_era,  message = F}
-
 pct_quakes <- states_quakes %>%
-  filter(STUSPS %in% top_states) %>%
-  group_by(era, STUSPS) %>%
-  summarise(count = length(STUSPS)) %>%
-  group_by(STUSPS) %>% mutate(pct = count * 100/sum(count))
+  filter(STUSPS %in% top_states$STUSPS) %>%
+  group_by(era, STUSPS) %>% 
+  summarise(era_count = n()) %>%
+  group_by(STUSPS) %>%
+  mutate(state_total = sum(era_count)) %>%
+  mutate(era_pct = 100 * era_count / state_total)
 
-mygrid <- ggplot(pct_quakes, aes(x = factor(1), y = pct, fill = era)) +
+mygrid <- ggplot(pct_quakes, aes(x = factor(1), y = era_pct, fill = era)) +
   scale_fill_manual(values = c("#999999", "#666666", "#333333", "#CC0000"),  guide = guide_legend(reverse = TRUE)) +
   geom_bar(width = 1, alpha = 0.6, stat = "identity", size = 0.2 ,
            aes(order = desc(era))) +

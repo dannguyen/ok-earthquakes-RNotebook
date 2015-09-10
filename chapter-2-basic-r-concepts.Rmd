@@ -19,7 +19,14 @@ output:
 
 This chapter is focused on R syntax and concepts for working with data frames and generating visualizations via ggplot2. For demonstration purposes, I use a subset of the U.S. Geological Survey's earthquake data (records for August 2015). Chapters 3 and 4 will repeat the same concepts except with earthquake data spanning back to 1995.
 
-If you're pretty comfortable with R, you can go ahead and skip to [Chapter 3](#mark-chapter-3)
+
+## What is ggplot
+
+
+### Be explicit and repetitive
+
+
+
 
 
 ## Loading the libraries and themes
@@ -201,7 +208,7 @@ ggplot(usgs_data, aes(x = time, y = mag)) +
 
 First of all, from a conceptual standpoint, one might argue that a scatterplot doesn't much sense here, because how _big_ an earthquake is seems to be totally unrelated to when it happens. This is not quite true, as weaker earthquakes can presage or closely follow &ndash;  i.e. [aftershocks](http://earthquake.usgs.gov/learn/glossary/?term=aftershocks) &ndash; a massive earthquake.
 
-But such an insight is lost in our current attempt because we're attempting to plot the entire world's earthquakes on a single plot. This ends up being impractical. There are so many earthquake events that we run into the problem of __overplotting__: Dots representing earthquakes of similar magnitude and time will overlap and obscure each other.
+But that insight is lost in our current attempt because we're attempting to plot the entire world's earthquakes on a single plot. This ends up being impractical. There are so many earthquake events that we run into the problem of __overplotting__: Dots representing earthquakes of similar magnitude and time will overlap and obscure each other.
 
 One way to fix this is to change the shape of the dots and increase their transparency, i.e. _decrease_ their __alpha__:
 
@@ -213,7 +220,8 @@ ggplot(usgs_data, aes(x = time, y = mag)) +
 ```
 That's a little better, but there are just too many points for us to visually process. For example, we can vaguely tell that there seem to be more earthquakes of magnitudes between 0 and 2. But we can't accurately quantify the difference.
 
-{:#make-histogram}
+
+[](){:#make-histogram}
 
 ### Fun with histograms
 
@@ -446,7 +454,8 @@ Once you understand map projections, or at least are aware of their existence, a
 ```{r, albers_us_world_plot, message = FALSE, warning = FALSE}
 ggplot() +
   geom_polygon(data = us_map, aes(x = long, y = lat, group = group)) +
-  coord_map("albers", lat0 = 38, latl = 42) + theme_classic()
+  coord_map("albers", lat0 = 38, latl = 42) +
+  theme_classic()
 ```
 
 
@@ -529,7 +538,7 @@ So instead, we use the latitude/longitude coordinates stored in `usc_map` to fil
 
 ```{r, message = FALSE, warning = FALSE}
 sp_quakes <- SpatialPointsDataFrame(data = quakes,
-                          coords = quakes[,c("longitude", "latitude")])
+                                    coords = quakes[,c("longitude", "latitude")])
 ```
 
 Then we assign it the same __projection__ as `us_map` (note that `usc_map` also has this same projection). First let's inspect the actual projection of `us_map`:
@@ -570,8 +579,6 @@ I actually don't know enough about basic R notation and __S4__ objects to know o
 ```{r, message = FALSE, warning = FALSE}
 sp_usc_quakes <- sp_quakes[usc_map,]
 ```
-
-
 
 
 ```{r, albers_contiguous_us_quakes_month, message = FALSE, warning = FALSE}
@@ -775,6 +782,15 @@ ggplot(states_quakes, aes(x = floor_date(as.Date(time), 'day'),
 
 ```
 
+### Line and area charts
+
+I've included these here because I keep forgetting how to make them. However, _neither of them_ are particularly useful for our data.
+
+For example, here's a line chart of the
+
+
+
+
 
 ### Small multiples
 
@@ -796,7 +812,7 @@ ggplot2's __facet_wrap()__ function provides a convenient way to generate a grid
 ```
 
 
-### Map your dots with bins
+### Put your mappable dots into bins
 
 We've seen how a histogram brings clarity to dense data by "binning" values, such as [grouping earthquakes by nearest decimal of magnitude](aug_2015_histogram_quakes_bucketed_tenths-mark), or by day for a time series.
 
@@ -810,13 +826,13 @@ ggplot() +
                fill = "white", color = "#666666", size = 0.5) +
   geom_point(data = ok_quakes,
               aes(x = longitude, y = latitude), color = "red", alpha = 0.4, shape = 1, size = 2.5) +
-  coord_equal() +
+  coord_map("albers", lat0 = 38, latl = 42) +
   ggtitle("M3.0+ earthquakes in Oklahoma, August 2015") +
   theme_dan_map()
 ```
 
 
-__Note__: In the snippet above, I use the [__coord_equal()__ function](http://stackoverflow.com/questions/12443620/why-coord-equal-doesnt-work-the-way-it-should) instead of `coord_map("albers")` -- binning adds another complexity to the projection workflow, so I leave out Albers for now.
+
 
 A few of the earthquakes are so close together that they appear to be in the exact same location at this zoom level. But how many exactly? There could be 2, 3, or 10 earthquakes represented by what appear to be a single marker.
 
@@ -829,7 +845,7 @@ ggplot(data = ok_quakes, aes(x = longitude, y = latitude)) +
                aes(x = long, y = lat, group = group),
                fill = "white", color = "#666666", size = 0.5) +
   stat_bin2d(color = "gray") +
-  coord_equal() +
+  coord_map("albers", lat0 = 38, latl = 42) +
   ggtitle("M3.0+ earthquakes in Oklahoma, August 2015 (rectangular-binned)") +
   theme_dan_map()
 ```
@@ -844,16 +860,10 @@ ggplot(data = ok_quakes, aes(x = longitude, y = latitude)) +
                aes(x = long, y = lat, group = group),
                fill = "white", color = "#666666", size = 0.5) +
   stat_bin2d(color = "gray", bins = 10, fill = "blue", aes(alpha = ..count..)) +
-  coord_equal() +
+  coord_map("albers", lat0 = 38, latl = 42) +
   ggtitle("M3.0+ earthquakes in Oklahoma, August 2015 (rectangular-binned)") +
   theme_dan_map()
 ```
-
-
-
-
-
-
 
 
 You can also set `fill` to null and have the bins vary by __color__, which is helpful for seeing the underlying layers. In the example below, I've also included the earthquakes as points so that you can see how many points are in each bin:
@@ -868,46 +878,47 @@ ggplot(data = ok_quakes, aes(x = longitude, y = latitude)) +
                fill = "white", color = "#666666", size = 0.5) +
   stat_bin2d(aes(color = ..count..), bins = 10, fill = "NA") +
   geom_point(color = "red", alpha = 0.5, shape = 1) +
-  coord_equal() +
+  coord_map("albers", lat0 = 38, latl = 42) +
   ggtitle("M3.0+ earthquakes in Oklahoma, August 2015 (rectangular-binned)") +
   theme_dan_map()
 ```
 
 
-If you want to get fancy
+#### Contour and density plots
 
-
-
-
-####
-
-
-
-#### Density plot
-
+If you want to get fancy, you can use [stat_density2d() to create a 2D density plot with contour lines](http://docs.ggplot2.org/current/stat_density2d.html), sometimes referred to as a [continuous 2D-histogram](http://www.r-bloggers.com/5-ways-to-do-2d-histograms-in-r/):
 
 ```{r, aug_2015_ok_density2d, message = FALSE}
-ggplot() +
+ggplot(data = ok_quakes, aes(x = longitude, y = latitude)) +
   geom_polygon(data = ok_map,
                aes(x = long, y = lat, group = group),
                fill = "white", color = "#666666", size = 0.5) +
   geom_point(data = ok_quakes, aes(x = longitude, y = latitude),
             color = "red") +
-  stat_density2d(data = ok_quakes, aes(x = longitude, y = latitude)) +
-  coord_equal() +
-  ggtitle("M3.0+ earthquakes in Oklahoma, August 2015 (rectangular-binned)") +
+  stat_density2d(bins = 10) +
+  coord_map("albers", lat0 = 38, latl = 42) +
+  ggtitle("M3.0+ earthquakes in Oklahoma, August 2015 (density plot)") +
   theme_dan_map()
 ```
 
+Density plots are neat but they confuse easily-confused people like myself, and I don't think the continuous binning is helpful in this situation. It also looks too much like a topographical map, which is particularly confusing when the topic involves earthquakes and geology.
 
 
+### Hexbins
 
-######TKTK
+So when it comes to two-dimensional binning, I prefer hexbins. I had a hard time justifying why, other than boxes are boring because everyone else uses them. But [Fabio Nelli has a nice technical explanation why hexagons make for nice bins](http://www.meccanismocomplesso.org/en/hexagonal-binning/):
+
+> There are many reasons for using hexagons instead of squares for binning a 2D surface as a plane. The most evident is that hexagons are more similar to circle than square. This translates in more efficient data aggregation around the bin center. This can be seen by looking at some particular properties of hexagons and, especially, of the hexagonal tessellation.
+
+See also: Chris Stucchio's [fine demonstration of hexbins to bring clarity to a real-world scatterplot snafu](https://www.chrisstucchio.com/blog/2012/dont_use_scatterplots.html).
 
 
-Hexbin without projection, Oklahoma
+But I admit that my hex-preference is primarily informed by [how the hexbin package](https://github.com/edzer/hexbin) makes it so easy to plot hexagonal bins with R and ggplot2:
 
-```{r, aug_2015_ok_hexbin, message = FALSE}
+__Note__: In the snippet below, I use the [__coord_equal()__ function](http://stackoverflow.com/questions/12443620/why-coord-equal-doesnt-work-the-way-it-should) instead of `coord_map("albers")`. There might be a bug specific to [hexbin and projections](https://github.com/edzer/hexbin/issues/1), so I leave out Albers for now and, further below, [present a workaround](#mark-hexbin-albers-workaround).
+
+
+```{r, aug_2015_ok_hexbin_coord_equal, message = FALSE}
 ggplot() +
   geom_polygon(data = ok_map,
                aes(x = long, y = lat, group = group),
@@ -921,71 +932,37 @@ ggplot() +
 ```
 
 
-When viewing the entire contiguous U.S., the shortcomings of the standard projection are more obvious. I've left on the x- and y-axis so that you can see the actual values of the longitude and latitude columns and then compare them to the Albers-projected values in the next example:
+### Using real-world map tiles with ggmap
 
+One of my favorite R packages is [ggmap](https://cran.r-project.org/web/packages/ggmap/index.html), which provides a convenient interface for downloading map imagery and location data from [Google Static Maps](https://developers.google.com/maps/documentation/static-maps/), [OpenStreetMaps](https://www.openstreetmap.org), and [Stamen Design](http://stamen.com/maps), which can then be used as a layer for ggplot data visualizations.
 
-```{r, aug_2015_us_hexbin, message = FALSE}
-ggplot() +
-  geom_polygon(data = usc_map,
-               aes(x = long, y = lat, group = group),
-               fill = "white", color = "#666666", size = 0.5) +
-  stat_binhex(data = usc_quakes, bins = 50,
-              aes(x = longitude, y = latitude), color = "#999999") +
-  scale_fill_gradientn(colours = c("white", "red")) +
-  coord_equal() +
-  ggtitle("M3.0+ earthquakes in the contiguous U.S., August 2015")
+The Census's geographic shapefiles are more than adequate -- and often _ideal_ -- for representing familiar land masses and boundaries. But I'll let ggmap's authors, [David Kahle and Hadley Wickham, describe the usecase for ggmap](http://journal.r-project.org/archive/2013-1/kahle-wickham.pdf):
+
+> In spatial statistics the ability to visualize data and models superimposed with their basic social landmarks and geographic context is invaluable. ggmap is a new tool which enables such visualization by combining the spatial information of static maps from Google Maps, OpenStreetMap, Stamen Maps or CloudMade Maps with the layered grammar of graphics implementation of ggplot2. In addition, several new utility functions are introduced which allow the user to access the Google Geocoding, Distance Matrix, and Directions APIs. The result is an easy, consistent and modular framework for spatial graphics with several convenient tools for spatial data analysis.
+
+ggmap is such an obviously handy tool but I haven't seen it available in other non-web visualization frameworks &ndash; though obviously, plotting points on Google Maps/OpenStreetMaps via JavaScript is a ubiquitous feature in browser-based applications. While the maps created by ggmap aren't interactive, you get the full power of R's data processing and ggplot's visualization. An easy tradeoff, in my opinion.
+
+#### ggmap's get_map()
+
+The ggmap library has a general __get_map()__ function. By default, it will fetch a map image from Google Static Maps, which passes the `location` value to [Google's sophisticated location query dis-discombobulation parser](http://gis.stackexchange.com/questions/26501/can-i-use-the-google-geocoding-api-to-parse-and-standardize-address-data):
+
+```{r, message = TRUE}
+chucky <- get_map(location = "Chucky Cheeses Ohkrahoma", zoom = 17)
+```
+
+By default, the `get_map()` function conveniently prints out the URLs that directly link to the [Google Static Maps image](http://maps.googleapis.com/maps/api/staticmap?center=Chucky+Cheeses+Ohkrahoma&zoom=8&size=640x640&scale=2&maptype=terrain&language=en-EN&sensor=false) and the [API's JSON response](http://maps.googleapis.com/maps/api/geocode/json?address=Chucky%20Cheeses%20Ohkrahoma&sensor=false); I've left in its output above as an example.
+
+The object returned by `get_map()` is a [raster image](https://en.wikipedia.org/wiki/Raster_data). Use the __ggmap() function__ to plot it:
+
+```{r, message = F}
+ggmap(chucky)
 ```
 
 
 
 
-#### Projecting hexbins onto Albers
-
-We can't rely on the __coord_map()__ function to neatly project the coordinate system to the Albers system, because __stat_binhex()__ needs to do its binning on the non-translated longitude/latitude. If that poor explanation makes no sense to you, that's OK, it barely makes sense to me.
-
-The upshot is that if we want the visually-pleasing Albers projection for our hexbinned-map, we need to apply the projection to the data frames _before_ we try to plot them.
-
-We use the `spTransform()` function to apply the Albers coordinate system to `usc_map` and `usc_quakes`:
-
-```{r, message = FALSE}
-# store the Albers system in a variable as we need to apply it separately
-# to usc_map and usc_quakes
-albers_crs <- CRS("+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs")
-
-# turn usc_quakes into a SpatialPointsDataFrame
-sp_usc <-  SpatialPointsDataFrame(data = usc_quakes,
-                          coords = usc_quakes[,c("longitude", "latitude")])
-# give it the same default projection as usc_map
-sp_usc@proj4string <- usc_map@proj4string
-# Apply the Albers projection to the spatial quakes data and convert it
-# back to a data frame. Note that the Albers coordinates are stored in
-# latitude.2 and longitude.2
-albers_quakes <- as.data.frame(spTransform(sp_usc, albers_crs))
-
-# Apply the Albers projection to usc_map
-albers_map <- spTransform(usc_map, albers_crs)
-```
-
-Note: in the `x` and `y` aesthetic for the `stat_binhex()` call, we refer to `longitude.2` and `latitude.2`. This is because `albers_quakes` is the result of two `SpaitalPointsDataFrame` conversions; each conversion creates a new `longitude` and `latitude` column.
-
-After those extra steps, we can now hexbin our earthquake data on the Albers coordinate system; again, this is purely an aesthetic fix. As in the previous example, I've left on the x- and y-axis so you can see how the range of values that the Albers projection maps to:
 
 
-```{r, aug_2015_us_quakes_albers_hexbin, message = FALSE}
-ggplot() +
-  geom_polygon(data = albers_map,
-               aes(x = long, y = lat, group = group),
-               fill = "white", color = "#666666", size = 0.5) +
-  stat_binhex(data = as.data.frame(albers_quakes), bins = 50,
-              aes(x = longitude.2, y = latitude.2), color = "#993333") +
-  scale_fill_gradientn(colours = c("white", "red")) +
-  coord_equal() +
-  ggtitle("M3.0+ earthquakes in the contiguous U.S., August 2015\n(Albers projection)")
-```
-
-
-
-### Google Satellite Maps
 
 In lieu of using shapefiles that contain geological features:
 
@@ -1036,22 +1013,130 @@ ggmap(hybrid_goog_map, extent = 'panel') +
 
 
 
+
+
+
+
+
+
+-----------
+
+
 At this point, we've covered just the general range of the data-munging and visualization techniques we need to effectively analyze and visualize the historical earthquake data for the United States.
 
 
 
 
+## Optional and fun exercises
 
-<!--
-To render this file:
-library(rmarkdown)
-library(knitr)
-setwd("~/Dropbox/rprojs/ok-earthquakes-Rnotebook/")
-this_file <- 'chapter-2-basic-r-concepts.Rmd'
 
-opts_chunk$set(fig.width = 9, fig.height = 5, dpi = 200)
-render(this_file, output_dir = './build_md', md_document(variant = "markdown_github", preserve_yaml = FALSE))
 
-render(this_file, output_dir = './builds', html_document(toc = TRUE, self_contained = F))
 
--->
+[](){:#mark-hexbin-albers-workaround}
+
+
+### Projecting geocoordinates without coord_map()
+
+
+We use the `spTransform()` function to apply the Albers coordinate system to `usc_map` and `usc_quakes`:
+
+```{r, message = FALSE}
+# store the Albers system in a variable as we need to apply it separately
+# to usc_map and usc_quakes
+albers_crs <- CRS("+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs")
+
+# turn usc_quakes into a SpatialPointsDataFrame
+sp_usc <-  SpatialPointsDataFrame(data = usc_quakes,
+                          coords = usc_quakes[,c("longitude", "latitude")])
+# give it the same default projection as usc_map
+sp_usc@proj4string <- usc_map@proj4string
+# Apply the Albers projection to the spatial quakes data and convert it
+# back to a data frame. Note that the Albers coordinates are stored in
+# latitude.2 and longitude.2
+albers_quakes <- as.data.frame(spTransform(sp_usc, albers_crs))
+
+# Apply the Albers projection to usc_map
+albers_map <- spTransform(usc_map, albers_crs)
+```
+
+Note: in the `x` and `y` aesthetic for the `stat_binhex()` call, we refer to `longitude.2` and `latitude.2`. This is because `albers_quakes` is the result of two `SpaitalPointsDataFrame` conversions; each conversion creates a new `longitude` and `latitude` column.
+
+After those extra steps, we can now hexbin our earthquake data on the Albers coordinate system:
+
+```{r, aug_2015_us_quakes_albers_hexbin, message = FALSE}
+ggplot() +
+  geom_polygon(data = albers_map,
+               aes(x = long, y = lat, group = group),
+               fill = "white", color = "#666666", size = 0.5) +
+  stat_binhex(data = as.data.frame(albers_quakes), bins = 50,
+              aes(x = longitude.2, y = latitude.2), color = "#993333") +
+  scale_fill_gradientn(colours = c("white", "red")) +
+  coord_equal() +
+  ggtitle("M3.0+ earthquakes in the contiguous U.S., August 2015\n(Albers projection)")
+```
+
+Again, this is purely an aesthetic fix. Your data analysis doesn't become less important because your map looks weird. But geographical/geopolitical maps, as flawed as they are for most data analyses, are liked _because_ of our familiarity with them. So if you decide to plot on a geographical layer, _not_ looking weird may actually be a high priority.
+
+
+### Query USGS earthquake historical data using Census spatial data
+
+### Analyzing earthquake data at the county level
+
+```{r, message = FALSE, warning = FALSE, results = "hide"}
+shpname <- 'cb_2014_us_county_20m'
+url <- paste0("http://www2.census.gov/geo/tiger/GENZ2014/shp/", shpname, ".zip")
+fname <- paste0("./data/", shpname, ".zip")
+if (!file.exists(fname)){
+  print(paste("Downloading: ", url))
+  download.file(url, fname)
+}
+unzip(fname, exdir = "./data/shp")
+```
+
+```{r, message = FALSE, warning = FALSE}
+counties_map <- readOGR(paste0("./data/shp/", shpname, '.shp'), shpname,
+                         stringsAsFactors = FALSE)
+# give them a STUSPS column
+counties_map <- merge(counties_map, states_map@data[c('STUSPS', 'STATEFP')], by = 'STATEFP')
+# subset for only the counties with STUSPS values
+counties_map <- subset(counties_map, !is.na(STUSPS))
+```
+
+
+
+#### Oklahoma counties
+
+Reusing `ok_quakes` (TK: all_ok_quakes)
+
+```{r, message = FALSE, warning = FALSE}
+ok_counties <- subset(counties_map, STUSPS == 'OK')
+ggplot(data = ok_quakes, aes(x = longitude, y = latitude)) +
+  geom_polygon(data = ok_counties, aes(x = long, y = lat, group = group),
+                color = "black", size = 0.2, fill = "white") +
+  geom_point(data = ok_quakes, aes(x = longitude, y = latitude), color = "red", shape = 1) +
+  coord_map('albers', lat0 = 39, lat1 = 42) +
+  theme_dan_map()
+```
+
+
+
+
+# give them a STUSPS column
+counties_map <- merge(counties_map, states_map@data[c('STUSPS', 'STATEFP')], by = 'STATEFP')
+# subset for only the counties with STUSPS values
+counties_map <- subset(counties_map, !is.na(STUSPS))
+
+
+
+
+### Using ggmap to geolocate the most earthquake-prone Chuck E. Cheese in the state of Oklahoma
+
+
+http://newsok.com/article/5423712
+
+
+
+###
+
+
+http://www.chuckecheese.com/experience/locations?zip=10001&miles=10000&c=1000
